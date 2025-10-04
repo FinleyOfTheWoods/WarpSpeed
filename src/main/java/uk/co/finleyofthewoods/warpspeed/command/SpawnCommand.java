@@ -2,7 +2,6 @@ package uk.co.finleyofthewoods.warpspeed.command;
 
 import com.mojang.brigadier.CommandDispatcher;
 import com.mojang.brigadier.context.CommandContext;
-import com.mojang.brigadier.exceptions.CommandSyntaxException;
 import net.minecraft.server.command.ServerCommandSource;
 import net.minecraft.server.network.ServerPlayerEntity;
 import net.minecraft.text.Text;
@@ -15,7 +14,7 @@ import uk.co.finleyofthewoods.warpspeed.utils.TeleportUtils;
 import static net.minecraft.server.command.CommandManager.literal;
 
 public class SpawnCommand {
-    private static final Logger LOGGER = LoggerFactory.getLogger("SpawnCommand");
+    private static final Logger LOGGER = LoggerFactory.getLogger(SpawnCommand.class);
 
     /**
      * Registers the /spawn command with the command dispatcher.

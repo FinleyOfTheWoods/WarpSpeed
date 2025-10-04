@@ -8,7 +8,7 @@ import org.slf4j.LoggerFactory;
 import uk.co.finleyofthewoods.warpspeed.Exceptions.NoSafeLocationFoundException;
 
 public class TeleportUtils {
-    private static final Logger LOGGER = LoggerFactory.getLogger("TeleportUtils");
+    private static final Logger LOGGER = LoggerFactory.getLogger(TeleportUtils.class);
 
     public static boolean teleportToSpawn(ServerPlayerEntity player, World world, BlockPos spawnPos) {
         try {
@@ -18,33 +18,36 @@ public class TeleportUtils {
                     spawnPos.getY(),
                     spawnPos.getZ());
             BlockPos safeLoc = findSafeLocation(world, spawnPos);
-            boolean teleported = player.teleport(
-                    safeLoc.getX() + 0.5,
-                    safeLoc.getY(),
-                    safeLoc.getZ() + 0.5,
-                    true
-            );
-            LOGGER.debug("Teleport attempt was {} for player {} at ({}, {}, {})",
-                    teleported,
-                    player.getName().toString(),
-                    safeLoc.getX(),
-                    safeLoc.getY(),
-                    safeLoc.getZ()
-            );
-            if (!teleported) {
-                LOGGER.warn("failed to teleport {} to spawn at ({}, {}, {})",
-                        player.getName().toString(),
-                        safeLoc.getX(),
-                        safeLoc.getY(),
-                        safeLoc.getZ()
-                );
-            }
-            return teleported;
-        } catch (NoSafeLocationFoundException e) {
-            LOGGER.warn("Failed to find safe location for player {}", player.getName().toString());
-            return false;
+            return teleportPlayer(player, world, safeLoc);
         } catch (Exception e) {
-            LOGGER.error("Exception during teleport for player {}", player.getName().toString(), e);
+            handleException(e);
+            return false;
+        }
+    }
+
+    public static boolean teleportToHome(ServerPlayerEntity player, World world, String homeName, DatabaseManager dbManager) {
+        try {
+            HomePosition home = dbManager.getHome(player.getUuid(), homeName);
+            if (home == null) {
+                LOGGER.warn("Failed to find home for player {}: {}", player.getName().toString(), homeName);
+                return false;
+            }
+            String currentWorldId = world.getRegistryKey().getValue().toString();
+            if (!currentWorldId.equals(home.getWorldId())) {
+                LOGGER.warn("Failed to teleport {} to home {}: home is in world {}", player.getName().toString(), homeName, home.getWorldId());
+                return false;
+            }
+            BlockPos homePos = home.getBlockPos();
+            LOGGER.debug("Attempting to teleport {} to ({}, {}, {})",
+                    player.getName().toString(),
+                    homePos.getX(),
+                    homePos.getY(),
+                    homePos.getZ()
+            );
+            BlockPos safeLoc = findSafeLocation(world, homePos);
+            return teleportPlayer(player, world, safeLoc);
+        } catch (Exception e) {
+            handleException(e);
             return false;
         }
     }
@@ -76,5 +79,27 @@ public class TeleportUtils {
         }
         BlockPos headPos = pos.up();
         return world.getBlockState(pos).isAir() && world.getBlockState(headPos).isAir();
+    }
+
+    private static void handleException(Exception e) {
+        if (e instanceof NoSafeLocationFoundException nslfe) {
+            LOGGER.error("Failed to find safe location: {}", nslfe.getMessage());
+        } else {
+            LOGGER.error("Unexpected error during teleport: {}", e.getMessage());
+        }
+    }
+
+    private static boolean teleportPlayer(ServerPlayerEntity player, World world, BlockPos pos) {
+        double x = pos.getX() + 0.5;
+        double y = pos.getY();
+        double z = pos.getZ() + 0.5;
+        boolean teleported = player.teleport(x, y, z, true);
+        LOGGER.debug("Teleport attempt was {} for player {} at ({}, {}, {})",
+                teleported, player.getName().toString(), x, y, z);
+        if (!teleported) {
+            LOGGER.warn("failed to teleport {} to spawn at ({}, {}, {})",
+                    player.getName().toString(), x, y, z);
+        }
+        return teleported;
     }
 }
