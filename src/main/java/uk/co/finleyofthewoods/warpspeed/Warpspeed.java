@@ -8,6 +8,7 @@ import org.slf4j.LoggerFactory;
 import uk.co.finleyofthewoods.warpspeed.command.BackCommand;
 import uk.co.finleyofthewoods.warpspeed.command.HomeCommand;
 import uk.co.finleyofthewoods.warpspeed.command.SpawnCommand;
+import uk.co.finleyofthewoods.warpspeed.command.WarpCommand;
 import uk.co.finleyofthewoods.warpspeed.utils.DatabaseManager;
 
 public class Warpspeed implements ModInitializer {
@@ -36,6 +37,8 @@ public class Warpspeed implements ModInitializer {
             HomeCommand.register(dispatcher, dbManager);
             /// Handle /back command and teleport the player to the previous location.
             BackCommand.register(dispatcher);
+            /// Handle /warp command and teleport the player to the warp location.
+            WarpCommand.register(dispatcher, dbManager);
         }));
     }
     public static DatabaseManager getDatabaseManager() {

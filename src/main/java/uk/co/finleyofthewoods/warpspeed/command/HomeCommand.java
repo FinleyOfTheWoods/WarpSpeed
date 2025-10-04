@@ -11,6 +11,7 @@ import net.minecraft.util.math.BlockPos;
 import net.minecraft.world.World;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import uk.co.finleyofthewoods.warpspeed.Exceptions.NoWarpLocationFoundException;
 import uk.co.finleyofthewoods.warpspeed.utils.DatabaseManager;
 import uk.co.finleyofthewoods.warpspeed.utils.HomePosition;
 import uk.co.finleyofthewoods.warpspeed.utils.TeleportUtils;
@@ -131,8 +132,14 @@ public class HomeCommand {
                 player.sendMessage(Text.literal("Failed to delete home '" + homeName + "'"), false);
                 return 0;
             }
+        } catch(CommandSyntaxException e) {
+            LOGGER.error("Failed to execute /deleteWarp command", e);
+            return 0;
+        } catch (NoWarpLocationFoundException nwlfe) {
+            LOGGER.error("Warp not found: Failed to execute /deleteWarp command", nwlfe);
+            return 0;
         } catch (Exception e) {
-            LOGGER.error("Unexpected Exception: Failed to execute /delHome command", e);
+            LOGGER.error("Unexpected Exception: Failed to execute /deleteWarp command", e);
             return 0;
         }
     }
@@ -153,8 +160,11 @@ public class HomeCommand {
             }
 
             return 1;
+        } catch(CommandSyntaxException e) {
+            LOGGER.error("Failed to execute /deleteWarp command", e);
+            return 0;
         } catch (Exception e) {
-            LOGGER.error("Unexpected Exception: Failed to execute /homes command", e);
+            LOGGER.error("Unexpected Exception: Failed to execute /deleteWarp command", e);
             return 0;
         }
     }

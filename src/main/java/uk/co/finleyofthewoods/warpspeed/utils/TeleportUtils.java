@@ -13,9 +13,6 @@ public class TeleportUtils {
 
     public static boolean teleportToSpawn(ServerPlayerEntity player, World world, BlockPos spawnPos) {
         try {
-            // Store current location as previous location. To allow ping-ponging between two locations using /back repeatedly.
-            PlayerLocationTracker.storeCurrentLocation(player);
-
             LOGGER.debug("Attempting to teleport player {} to spawn at ({}, {}, {})",
                     player.getName().toString(),
                     spawnPos.getX(),
@@ -41,16 +38,10 @@ public class TeleportUtils {
                 LOGGER.warn("Failed to teleport {} to home {}: home is in world {}", player.getName().toString(), homeName, home.getWorldId());
                 return false;
             }
-            // Store current location as previous location. To allow ping-ponging between two locations using /back repeatedly.
-            PlayerLocationTracker.storeCurrentLocation(player);
 
             BlockPos homePos = home.getBlockPos();
             LOGGER.debug("Attempting to teleport {} to ({}, {}, {})",
-                    player.getName().toString(),
-                    homePos.getX(),
-                    homePos.getY(),
-                    homePos.getZ()
-            );
+                    player.getName().toString(), homePos.getX(), homePos.getY(), homePos.getZ());
             BlockPos safeLoc = findSafeLocation(world, homePos);
             return teleportPlayer(player, safeLoc);
         } catch (Exception e) {
@@ -74,13 +65,39 @@ public class TeleportUtils {
                 return false;
             }
 
-            // Store current location as previous location. To allow ping-ponging between two locations using /back repeatedly.
-            PlayerLocationTracker.storeCurrentLocation(player);
-
             BlockPos pos = location.getBlockPos();
             LOGGER.debug("Attempt to teleport {} back to ({}, {}, {})", player.getName().toString(), pos.getX(), pos.getY(), pos.getZ());
 
             BlockPos safeLoc = findSafeLocation(world, pos);
+            return teleportPlayer(player, safeLoc);
+        } catch (Exception e) {
+            handleException(e);
+            return false;
+        }
+    }
+
+    public static boolean teleportToWarp(ServerPlayerEntity player, World world, String warpName, DatabaseManager dbManager) {
+        try {
+            WarpPosition warp = dbManager.getWarp(warpName);
+            if (warp == null) {
+                LOGGER.warn("Failed to find warp for player {}: {}", player.getName().toString(), warpName);
+                return false;
+            }
+            String currentWorldId = world.getRegistryKey().getValue().toString();
+            if (!currentWorldId.equals(warp.getWorldId())) {
+                LOGGER.warn("Failed to teleport {} to warp {}: warp is in world {}", player.getName().toString(), warpName, warp.getWorldId());
+                player.sendMessage(Text.literal("Teleportation failed. Warp is in a different world."), false);
+                return false;
+            }
+            if (warp.isPrivate() && !warp.getPlayerUUID().equals(player.getUuid())) {
+                LOGGER.warn("Failed to teleport {} to warp {}: warp is private and not owned by player", player.getName().toString(), warpName);
+                player.sendMessage(Text.literal("Teleportation failed. Warp is private and not owned by you."), false);
+                return false;
+            }
+            BlockPos warpPos = warp.getBlockPos();
+            LOGGER.debug("Attempting to teleport {} to ({}, {}, {})",
+                    player.getName().toString(), warpPos.getX(), warpPos.getY(), warpPos.getZ());
+            BlockPos safeLoc = findSafeLocation(world, warpPos);
             return teleportPlayer(player, safeLoc);
         } catch (Exception e) {
             handleException(e);
@@ -118,6 +135,9 @@ public class TeleportUtils {
     }
 
     private static boolean teleportPlayer(ServerPlayerEntity player, BlockPos pos) {
+        // Store current location as previous location. To allow ping-ponging between two locations using /back repeatedly.
+        PlayerLocationTracker.storeCurrentLocation(player);
+
         double x = pos.getX() + 0.5;
         double y = pos.getY();
         double z = pos.getZ() + 0.5;
