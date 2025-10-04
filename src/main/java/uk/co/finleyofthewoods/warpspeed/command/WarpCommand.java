@@ -79,7 +79,7 @@ public class WarpCommand {
                 return 0;
             }
             int warpCount = dbManager.getWarpCount(player.getUuid());
-            if (warpCount > MAX_WARP_PER_PLAYER) {
+            if (warpCount >= MAX_WARP_PER_PLAYER) {
                 player.sendMessage(Text.literal("You have reached the maximum number of warps (" + MAX_WARP_PER_PLAYER + ")"), false);
                 return 0;
             }
