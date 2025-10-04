@@ -4,6 +4,7 @@
   "package": "uk.co.finleyofthewoods.warpspeed.mixin",
   "compatibilityLevel": "JAVA_21",
   "mixins": [
+    "ServerPlayerEntityMixin"
   ],
   "client": [
   ],

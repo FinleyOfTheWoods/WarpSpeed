@@ -1,6 +1,7 @@
 package uk.co.finleyofthewoods.warpspeed.utils;
 
 import net.minecraft.server.network.ServerPlayerEntity;
+import net.minecraft.text.Text;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.world.World;
 import org.slf4j.Logger;
@@ -12,13 +13,16 @@ public class TeleportUtils {
 
     public static boolean teleportToSpawn(ServerPlayerEntity player, World world, BlockPos spawnPos) {
         try {
+            // Store current location as previous location. To allow ping-ponging between two locations using /back repeatedly.
+            PlayerLocationTracker.storeCurrentLocation(player);
+
             LOGGER.debug("Attempting to teleport player {} to spawn at ({}, {}, {})",
                     player.getName().toString(),
                     spawnPos.getX(),
                     spawnPos.getY(),
                     spawnPos.getZ());
             BlockPos safeLoc = findSafeLocation(world, spawnPos);
-            return teleportPlayer(player, world, safeLoc);
+            return teleportPlayer(player, safeLoc);
         } catch (Exception e) {
             handleException(e);
             return false;
@@ -37,6 +41,9 @@ public class TeleportUtils {
                 LOGGER.warn("Failed to teleport {} to home {}: home is in world {}", player.getName().toString(), homeName, home.getWorldId());
                 return false;
             }
+            // Store current location as previous location. To allow ping-ponging between two locations using /back repeatedly.
+            PlayerLocationTracker.storeCurrentLocation(player);
+
             BlockPos homePos = home.getBlockPos();
             LOGGER.debug("Attempting to teleport {} to ({}, {}, {})",
                     player.getName().toString(),
@@ -45,7 +52,36 @@ public class TeleportUtils {
                     homePos.getZ()
             );
             BlockPos safeLoc = findSafeLocation(world, homePos);
-            return teleportPlayer(player, world, safeLoc);
+            return teleportPlayer(player, safeLoc);
+        } catch (Exception e) {
+            handleException(e);
+            return false;
+        }
+    }
+
+    public static boolean teleportToLastLocation(ServerPlayerEntity player) {
+        try {
+            if (!PlayerLocationTracker.hasPreviousLocation(player)) {
+                LOGGER.debug("Failed to teleport {} to last location: no previous location found", player.getName().toString());
+                return false;
+            }
+            PlayerLocationTracker.PlayerLocation location = PlayerLocationTracker.getPreviousLocation(player);
+            World world = player.getEntityWorld();
+            String currentWorldID = world.getRegistryKey().getValue().toString();
+            if (!currentWorldID.equals(location.getWorldId())) {
+                LOGGER.warn("Failed to teleport {} to last location: last location is in world {}", player.getName().toString(), location.getWorldId());
+                player.sendMessage(Text.literal("Teleportation failed. Last location is in a different world."), false);
+                return false;
+            }
+
+            // Store current location as previous location. To allow ping-ponging between two locations using /back repeatedly.
+            PlayerLocationTracker.storeCurrentLocation(player);
+
+            BlockPos pos = location.getBlockPos();
+            LOGGER.debug("Attempt to teleport {} back to ({}, {}, {})", player.getName().toString(), pos.getX(), pos.getY(), pos.getZ());
+
+            BlockPos safeLoc = findSafeLocation(world, pos);
+            return teleportPlayer(player, safeLoc);
         } catch (Exception e) {
             handleException(e);
             return false;
@@ -81,15 +117,7 @@ public class TeleportUtils {
         return world.getBlockState(pos).isAir() && world.getBlockState(headPos).isAir();
     }
 
-    private static void handleException(Exception e) {
-        if (e instanceof NoSafeLocationFoundException nslfe) {
-            LOGGER.error("Failed to find safe location: {}", nslfe.getMessage());
-        } else {
-            LOGGER.error("Unexpected error during teleport: {}", e.getMessage());
-        }
-    }
-
-    private static boolean teleportPlayer(ServerPlayerEntity player, World world, BlockPos pos) {
+    private static boolean teleportPlayer(ServerPlayerEntity player, BlockPos pos) {
         double x = pos.getX() + 0.5;
         double y = pos.getY();
         double z = pos.getZ() + 0.5;
@@ -101,5 +129,13 @@ public class TeleportUtils {
                     player.getName().toString(), x, y, z);
         }
         return teleported;
+    }
+
+    private static void handleException(Exception e) {
+        if (e instanceof NoSafeLocationFoundException nslfe) {
+            LOGGER.error("Failed to find safe location: {}", nslfe.getMessage());
+        } else {
+            LOGGER.error("Unexpected error during teleport: {}", e.getMessage());
+        }
     }
 }
