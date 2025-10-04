@@ -24,6 +24,13 @@ public class TeleportUtils {
                     safeLoc.getZ() + 0.5,
                     true
             );
+            LOGGER.debug("Teleport attempt was {} for player {} at ({}, {}, {})",
+                    teleported,
+                    player.getName().toString(),
+                    safeLoc.getX(),
+                    safeLoc.getY(),
+                    safeLoc.getZ()
+            );
             if (!teleported) {
                 LOGGER.warn("failed to teleport {} to spawn at ({}, {}, {})",
                         player.getName().toString(),

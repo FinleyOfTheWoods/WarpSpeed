@@ -2,8 +2,10 @@ package uk.co.finleyofthewoods.warpspeed.command;
 
 import com.mojang.brigadier.CommandDispatcher;
 import com.mojang.brigadier.context.CommandContext;
+import com.mojang.brigadier.exceptions.CommandSyntaxException;
 import net.minecraft.server.command.ServerCommandSource;
 import net.minecraft.server.network.ServerPlayerEntity;
+import net.minecraft.text.Text;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.world.World;
 import org.slf4j.Logger;
@@ -29,9 +31,13 @@ public class SpawnCommand {
     }
 
     private static int execute(CommandContext<ServerCommandSource> context) {
+        ServerCommandSource source = context.getSource();
+        ServerPlayerEntity player = source.getPlayer();
+        if (player == null) {
+            LOGGER.warn("Command executed by null player");
+            return 0;
+        }
         try {
-            ServerCommandSource source = context.getSource();
-            ServerPlayerEntity player = source.getPlayerOrThrow();
             World world = player.getEntityWorld();
             BlockPos spawnPos = world.getSpawnPoint().getPos();
             LOGGER.debug("Player {} executed /spawn command. Teleporting to spawn at {} {} {}",
@@ -41,8 +47,17 @@ public class SpawnCommand {
                 spawnPos.getZ()
             );
             boolean success = TeleportUtils.teleportToSpawn(player, world, spawnPos);
+            if (success) {
+                LOGGER.debug("Successfully teleported player {}", player.getName().getString());
+                player.sendMessage(Text.literal("Teleported to spawn!"), false);
+                return 1;
+            } else {
+                player.sendMessage(Text.literal("Failed to teleport to spawn!"), false);
+                return 0;
+            }
         } catch (Exception e) {
             LOGGER.error("Failed to execute /spawn command", e);
+            player.sendMessage(Text.literal("Failed to teleport to spawn!"), false);
         }
         return 0;
     }
