@@ -19,7 +19,7 @@
       "uk.co.finleyofthewoods.warpspeed.Warpspeed"
     ],
     "client": [
-      "uk.co.finleyofthewoods.warpspeed.WarpSpeedModClient"
+      "uk.co.finleyofthewoods.warpspeed.WarpspeedClient"
     ]
   },
   "mixins": [

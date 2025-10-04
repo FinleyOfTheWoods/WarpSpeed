@@ -2,7 +2,7 @@ package uk.co.finleyofthewoods.warpspeed;
 
 import net.fabricmc.api.ClientModInitializer;
 
-public class WarpSpeedModClient implements ClientModInitializer {
+public class WarpspeedClient implements ClientModInitializer {
     @Override
     public void onInitializeClient() {
 
