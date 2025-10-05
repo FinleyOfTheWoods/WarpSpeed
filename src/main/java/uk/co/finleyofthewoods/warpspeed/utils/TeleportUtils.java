@@ -1,5 +1,6 @@
 package uk.co.finleyofthewoods.warpspeed.utils;
 
+import net.minecraft.block.Blocks;
 import net.minecraft.server.network.ServerPlayerEntity;
 import net.minecraft.text.Text;
 import net.minecraft.util.math.BlockPos;
@@ -127,11 +128,16 @@ public class TeleportUtils {
 
     private static boolean isSafeLocation(World world, BlockPos pos) {
         BlockPos belowPos = pos.down();
-        if (!world.getBlockState(belowPos).isSolidBlock(world, belowPos)) {
+        BlockPos headPos = pos.up();
+        if (!world.getBlockState(belowPos).isSolidBlock(world, belowPos) && !world.getBlockState(belowPos).isOf(Blocks.WATER)) {
             return false;
         }
-        BlockPos headPos = pos.up();
-        return world.getBlockState(pos).isAir() && world.getBlockState(headPos).isAir();
+        if (world.getBlockState(pos).isAir() && world.getBlockState(headPos).isAir()) {
+            return true;
+        } else if (world.getBlockState(pos).isOf(Blocks.WATER) && world.getBlockState(headPos).isOf(Blocks.WATER)) {
+            return true;
+        }
+        return false;
     }
 
     private static boolean teleportPlayer(ServerPlayerEntity player, BlockPos pos) {

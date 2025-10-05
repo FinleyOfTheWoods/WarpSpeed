@@ -35,7 +35,7 @@ public class DatabaseManager {
     }
 
     private void createTables() throws SQLException {
-        String createTableSQL = """
+        String createHomesTableSQL = """
                     CREATE TABLE IF NOT EXISTS homes (
                         id INTEGER PRIMARY KEY AUTOINCREMENT,
                         player_uuid TEXT NOT NULL,
@@ -47,6 +47,20 @@ public class DatabaseManager {
                         created_at INTEGER NOT NULL,
                         UNIQUE(player_uuid, home_name)
                     );
+                """;
+        try (Statement stmt = connection.createStatement()) {
+            stmt.execute(createHomesTableSQL);
+            LOGGER.info("Homes tables created or already exists");
+        }
+
+        // Create an index for faster lookups
+        String createHomesIndexSQL = "CREATE INDEX IF NOT EXISTS idx_player_homes ON homes(player_uuid);";
+        try (Statement stmt = connection.createStatement()) {
+            stmt.execute(createHomesIndexSQL);
+            LOGGER.info("Homes index created or already exists");
+        }
+
+        String createWarpsTableSQL = """
                 CREATE TABLE IF NOT EXISTS warps (
                   id INTEGER PRIMARY KEY AUTOINCREMENT,
                   player_uuid TEXT NOT NULL,
@@ -57,22 +71,17 @@ public class DatabaseManager {
                   z INTEGER NOT NULL,
                   is_private INTEGER NOT NULL,
                   created_at INTEGER NOT NULL,
-                  UNIQUE(warp_name)  
+                  UNIQUE(warp_name)
                 );
                 """;
         try (Statement stmt = connection.createStatement()) {
-            stmt.execute(createTableSQL);
-            LOGGER.info("Tables created or already exists");
+            stmt.execute(createWarpsTableSQL);
+            LOGGER.info("Warps tables created or already exists");
         }
-
-        // Create an index for faster lookups
-        String createIndexSQL = """
-        CREATE INDEX IF NOT EXISTS idx_player_homes ON homes(player_uuid);
-        CREATE INDEX IF NOT EXISTS idx_warp_name ON warps(warp_name);
-        """;
+        String createWarpsIndexSQL = "CREATE INDEX IF NOT EXISTS idx_player_warps ON warps(player_uuid);";
         try (Statement stmt = connection.createStatement()) {
-            stmt.execute(createIndexSQL);
-            LOGGER.info("Index created or already exists");
+            stmt.execute(createWarpsIndexSQL);
+            LOGGER.info("Warps index created or already exists");
         }
     }
     /**
