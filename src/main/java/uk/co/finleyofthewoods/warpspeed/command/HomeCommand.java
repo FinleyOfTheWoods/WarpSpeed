@@ -86,6 +86,7 @@ public class HomeCommand {
         dispatcher.register(literal("delHome")
                 .requires(source -> source.getPlayer() != null)
                 .then(argument("homeName", StringArgumentType.word())
+                        .suggests(homeSuggestions(dbManager))
                         .executes(context -> executeDeleteHome(context, dbManager)))
         );
     }

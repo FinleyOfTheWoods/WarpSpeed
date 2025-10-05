@@ -90,7 +90,7 @@ public class WarpCommand {
                                 .suggests(isPrivateSuggestion())
                                 .executes(context -> executeSetWarp(context, dbManager))))
         );
-        dispatcher.register(literal("deleteWarp")
+        dispatcher.register(literal("delWarp")
                 .requires(source -> source.getPlayer() != null)
                 .then(argument("warpName", StringArgumentType.word())
                         .suggests(playerWarpSuggestions(dbManager))
