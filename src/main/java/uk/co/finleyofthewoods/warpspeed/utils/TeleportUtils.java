@@ -184,7 +184,7 @@ public class TeleportUtils {
                     Vec3d.ZERO,  // velocity set to zero to prevent the player from moving during cross-dimension teleportation
                     player.getYaw(),
                     player.getPitch(),
-                    null
+                    TeleportTarget.NO_OP
             );
             ServerPlayerEntity result = player.teleportTo(target);
             teleported = (result != null);
