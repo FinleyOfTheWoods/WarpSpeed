@@ -5,6 +5,9 @@ import com.mojang.brigadier.arguments.IntegerArgumentType;
 import com.mojang.brigadier.arguments.StringArgumentType;
 import com.mojang.brigadier.context.CommandContext;
 import com.mojang.brigadier.exceptions.CommandSyntaxException;
+import com.mojang.brigadier.suggestion.SuggestionProvider;
+import com.mojang.brigadier.suggestion.Suggestions;
+import com.mojang.brigadier.suggestion.SuggestionsBuilder;
 import net.minecraft.server.command.ServerCommandSource;
 import net.minecraft.server.network.ServerPlayerEntity;
 import net.minecraft.text.Text;
@@ -16,6 +19,11 @@ import uk.co.finleyofthewoods.warpspeed.utils.DatabaseManager;
 import uk.co.finleyofthewoods.warpspeed.utils.TeleportUtils;
 import uk.co.finleyofthewoods.warpspeed.utils.WarpPosition;
 
+import java.util.Arrays;
+import java.util.List;
+import java.util.Objects;
+import java.util.concurrent.CompletableFuture;
+
 import static net.minecraft.server.command.CommandManager.argument;
 import static net.minecraft.server.command.CommandManager.literal;
 
@@ -23,21 +31,69 @@ public class WarpCommand {
     private static final Logger LOGGER = LoggerFactory.getLogger(WarpCommand.class);
     private static final int MAX_WARP_PER_PLAYER = 254;
 
+    private static SuggestionProvider<ServerCommandSource> accessibleWarpSuggestions(DatabaseManager dbManager) {
+        return (context, builder) -> {
+            try {
+                ServerPlayerEntity player = context.getSource().getPlayerOrThrow();
+                List<String> warpNames = dbManager.getAccessibleWarpNames(player.getUuid());
+                return suggestMatching(warpNames, builder);
+            } catch(CommandSyntaxException e) {
+                return Suggestions.empty();
+            }
+        };
+    }
+
+    private static SuggestionProvider<ServerCommandSource> playerWarpSuggestions(DatabaseManager dbManager) {
+        return (context, builder) -> {
+            try {
+                ServerPlayerEntity player = context.getSource().getPlayerOrThrow();
+                List<String> warpNames = dbManager.getPlayerWarpNames(player.getUuid());
+                return suggestMatching(warpNames, builder);
+            } catch(CommandSyntaxException e) {
+                return Suggestions.empty();
+            }
+        };
+    }
+
+    private static SuggestionProvider<ServerCommandSource> isPrivateSuggestion() {
+        return (context, builder) -> {
+            return suggestMatching(Arrays.asList("false", "true"), builder);
+        };
+    }
+
+    /**
+     * Helper method to filter and suggest matching strings
+     */
+    private static CompletableFuture<Suggestions> suggestMatching(List<String> candidates, SuggestionsBuilder builder) {
+        String remaining = builder.getRemaining().toLowerCase();
+
+        for (String candidate : candidates) {
+            if (candidate.toLowerCase().startsWith(remaining)) {
+                builder.suggest(candidate);
+            }
+        }
+
+        return builder.buildFuture();
+    }
+
     public static void register(CommandDispatcher<ServerCommandSource> dispatcher, DatabaseManager dbManager) {
         dispatcher.register(literal("warp")
                 .requires(source -> source.getPlayer() != null)
                 .then(argument("warpName", StringArgumentType.word())
+                        .suggests(accessibleWarpSuggestions(dbManager))
                         .executes(context -> executeTeleportToWarp(context, dbManager)))
         );
         dispatcher.register(literal("setWarp")
                 .requires(source -> source.getPlayer() != null)
                 .then(argument("warpName", StringArgumentType.word())
-                        .then(argument("private", IntegerArgumentType.integer(0, 1))
+                        .then(argument("private", StringArgumentType.word())
+                                .suggests(isPrivateSuggestion())
                                 .executes(context -> executeSetWarp(context, dbManager))))
         );
         dispatcher.register(literal("deleteWarp")
                 .requires(source -> source.getPlayer() != null)
                 .then(argument("warpName", StringArgumentType.word())
+                        .suggests(playerWarpSuggestions(dbManager))
                         .executes(context -> executeDeleteWarp(context, dbManager)))
         );
     }
@@ -71,8 +127,7 @@ public class WarpCommand {
             ServerCommandSource source = context.getSource();
             ServerPlayerEntity player = source.getPlayerOrThrow();
             String warpName = StringArgumentType.getString(context, "warpName");
-            boolean privateFlag = IntegerArgumentType.getInteger(context, "private") == 1;
-
+            boolean privateFlag = StringArgumentType.getString(context, "private").equals("true");
             boolean warpExists = dbManager.warpExists(warpName);
             if (warpExists) {
                 player.sendMessage(Text.literal("Warp '" + warpName + "' already exists"), false);

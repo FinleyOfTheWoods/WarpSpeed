@@ -318,6 +318,48 @@ public class DatabaseManager {
     }
 
     /**
+     * Gets all warp names accessible by a player (public warps + their private warps).
+     */
+    public List<String> getAccessibleWarpNames(UUID playerUUID) {
+        List<String> warpNames = new ArrayList<>();
+        String sql = "SELECT warp_name FROM warps WHERE is_private = 0 OR player_uuid = ? ORDER BY warp_name";
+
+        try (PreparedStatement pstmt = connection.prepareStatement(sql)) {
+            pstmt.setString(1, playerUUID.toString());
+
+            ResultSet rs = pstmt.executeQuery();
+            while (rs.next()) {
+                warpNames.add(rs.getString("warp_name"));
+            }
+        } catch (SQLException e) {
+            LOGGER.error("Failed to get accessible warp names", e);
+        }
+
+        return warpNames;
+    }
+
+    /**
+     * Gets all warp names owned by a player (for deletion autocomplete).
+     */
+    public List<String> getPlayerWarpNames(UUID playerUUID) {
+        List<String> warpNames = new ArrayList<>();
+        String sql = "SELECT warp_name FROM warps WHERE player_uuid = ? ORDER BY warp_name";
+
+        try (PreparedStatement pstmt = connection.prepareStatement(sql)) {
+            pstmt.setString(1, playerUUID.toString());
+
+            ResultSet rs = pstmt.executeQuery();
+            while (rs.next()) {
+                warpNames.add(rs.getString("warp_name"));
+            }
+        } catch (SQLException e) {
+            LOGGER.error("Failed to get player warp names", e);
+        }
+
+        return warpNames;
+    }
+
+    /**
      * Closes the database connection.
      */
     public void close() {

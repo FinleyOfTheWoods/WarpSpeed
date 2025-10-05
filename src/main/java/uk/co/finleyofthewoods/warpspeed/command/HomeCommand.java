@@ -4,6 +4,9 @@ import com.mojang.brigadier.CommandDispatcher;
 import com.mojang.brigadier.arguments.StringArgumentType;
 import com.mojang.brigadier.context.CommandContext;
 import com.mojang.brigadier.exceptions.CommandSyntaxException;
+import com.mojang.brigadier.suggestion.SuggestionProvider;
+import com.mojang.brigadier.suggestion.Suggestions;
+import com.mojang.brigadier.suggestion.SuggestionsBuilder;
 import net.minecraft.server.command.ServerCommandSource;
 import net.minecraft.server.network.ServerPlayerEntity;
 import net.minecraft.text.Text;
@@ -17,6 +20,7 @@ import uk.co.finleyofthewoods.warpspeed.utils.HomePosition;
 import uk.co.finleyofthewoods.warpspeed.utils.TeleportUtils;
 
 import java.util.List;
+import java.util.concurrent.CompletableFuture;
 
 import static net.minecraft.server.command.CommandManager.argument;
 import static net.minecraft.server.command.CommandManager.literal;
@@ -25,11 +29,43 @@ public class HomeCommand {
     private static final Logger LOGGER = LoggerFactory.getLogger(HomeCommand.class);
     private static final int MAX_HOME_PER_PLAYER = 10;
 
+    private static SuggestionProvider<ServerCommandSource> homeSuggestions(DatabaseManager dbManager) {
+        return (context, builder) -> {
+            try {
+                ServerPlayerEntity player = context.getSource().getPlayerOrThrow();
+                List<HomePosition> homeNames = dbManager.getPlayerHomes(player.getUuid());
+                List<String> homeNamesList = homeNames.stream().map(HomePosition::getHomeName).toList();
+                return suggestMatching(homeNamesList, builder);
+            } catch (CommandSyntaxException e) {
+                return Suggestions.empty();
+            } catch (Exception e) {
+                LOGGER.error("Unexpected Exception: Failed to execute /home command", e);
+                return Suggestions.empty();
+            }
+        };
+    }
+
+    /**
+     * Helper method to filter and suggest matching strings
+     */
+    private static CompletableFuture<Suggestions> suggestMatching(List<String> candidates, SuggestionsBuilder builder) {
+        String remaining = builder.getRemaining().toLowerCase();
+
+        for (String candidate : candidates) {
+            if (candidate.toLowerCase().startsWith(remaining)) {
+                builder.suggest(candidate);
+            }
+        }
+
+        return builder.buildFuture();
+    }
+
     public static void register(CommandDispatcher<ServerCommandSource> dispatcher, DatabaseManager dbManager) {
         // /home <name> - Teleport to home
         dispatcher.register(literal("home")
                 .requires(source -> source.getPlayer() != null)
                 .then(argument("homeName", StringArgumentType.word())
+                        .suggests(homeSuggestions(dbManager))
                         .executes(context -> executeTeleportHome(context, dbManager)))
         );
 
