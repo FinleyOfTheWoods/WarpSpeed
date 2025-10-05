@@ -83,5 +83,9 @@ public class PlayerLocationTracker {
         UUID uuid = player.getUuid();
         return previousLocations.containsKey(uuid) || deathLocations.containsKey(uuid);
     }
-
+    public static void clearPreviousLocation(ServerPlayerEntity player) {
+        UUID uuid = player.getUuid();
+        previousLocations.remove(uuid);
+        deathLocations.remove(uuid);
+    }
 }

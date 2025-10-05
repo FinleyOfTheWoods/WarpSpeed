@@ -7,7 +7,7 @@ import net.minecraft.util.math.BlockPos;
 import net.minecraft.world.World;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import uk.co.finleyofthewoods.warpspeed.Exceptions.NoSafeLocationFoundException;
+import uk.co.finleyofthewoods.warpspeed.exceptions.NoSafeLocationFoundException;
 
 public class TeleportUtils {
     private static final Logger LOGGER = LoggerFactory.getLogger(TeleportUtils.class);

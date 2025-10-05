@@ -2,7 +2,6 @@ package uk.co.finleyofthewoods.warpspeed.utils;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import uk.co.finleyofthewoods.warpspeed.Exceptions.NoWarpLocationFoundException;
 
 import java.io.File;
 import java.sql.*;
@@ -123,7 +122,7 @@ public class DatabaseManager {
     /**
      * Retrieves a specific home position for a player.
      */
-    public HomePosition getHome(UUID playerUUID, String homeName) throws Exception {
+    public HomePosition getHome(UUID playerUUID, String homeName) {
         String sql = "SELECT * FROM homes WHERE player_uuid = ? AND home_name = ? LIMIT 1";
 
         try (PreparedStatement pstmt = connection.prepareStatement(sql)) {
@@ -143,15 +142,18 @@ public class DatabaseManager {
                 );
             } else {
                 LOGGER.debug("Home '{}' not found", homeName);
-                throw new NoWarpLocationFoundException("Home not found");
+                return null;
             }
+        } catch (SQLException e) {
+            LOGGER.error("Failed to get home", e);
+            return null;
         }
     }
 
     /**
      * Retrieves all homes for a specific player.
      */
-    public List<HomePosition> getPlayerHomes(UUID playerUUID) throws Exception {
+    public List<HomePosition> getPlayerHomes(UUID playerUUID) {
         List<HomePosition> homes = new ArrayList<>();
         String sql = "SELECT * FROM homes WHERE player_uuid = ? ORDER BY home_name";
 
@@ -170,10 +172,12 @@ public class DatabaseManager {
                         rs.getLong("created_at")
                 ));
             }
+        } catch (SQLException e) {
+            LOGGER.error("Failed to get player homes", e);
+            return homes;
         }
         if (homes.isEmpty()) {
             LOGGER.debug("No homes found for player {}", playerUUID);
-            throw new NoWarpLocationFoundException("No homes found");
         }
         return homes;
     }
@@ -181,7 +185,7 @@ public class DatabaseManager {
     /**
      * Removes a home from the database.
      */
-    public boolean removeHome(UUID playerUUID, String homeName) throws Exception {
+    public boolean removeHome(UUID playerUUID, String homeName) {
         String sql = "DELETE FROM homes WHERE player_uuid = ? AND home_name = ? LIMIT 1";
 
         try (PreparedStatement pstmt = connection.prepareStatement(sql)) {
@@ -191,13 +195,16 @@ public class DatabaseManager {
             int affected = pstmt.executeUpdate();
             LOGGER.debug("Removed home '{}' for player {} (affected rows: {})", homeName, playerUUID, affected);
             return affected > 0;
+        } catch (SQLException e) {
+            LOGGER.error("Failed to remove home", e);
+            return false;
         }
     }
 
     /**
      * Checks if a home exists for a player.
      */
-    public boolean homeExists(UUID playerUUID, String homeName) throws Exception {
+    public boolean homeExists(UUID playerUUID, String homeName) {
         String sql = "SELECT COUNT(*) FROM homes WHERE player_uuid = ? AND home_name = ?";
 
         try (PreparedStatement pstmt = connection.prepareStatement(sql)) {
@@ -207,15 +214,19 @@ public class DatabaseManager {
             ResultSet rs = pstmt.executeQuery();
             if (rs.next()) {
                 return rs.getInt(1) > 0;
+            } else {
+                LOGGER.debug("Home '{}' not found", homeName);
+                return false;
             }
+        } catch (SQLException e) {
+            return false;
         }
-        return false;
     }
 
     /**
      * Gets the count of homes for a player.
      */
-    public int getHomeCount(UUID playerUUID) throws Exception {
+    public int getHomeCount(UUID playerUUID) {
         String sql = "SELECT COUNT(*) FROM homes WHERE player_uuid = ?";
 
         try (PreparedStatement pstmt = connection.prepareStatement(sql)) {
@@ -224,10 +235,14 @@ public class DatabaseManager {
             ResultSet rs = pstmt.executeQuery();
             if (rs.next()) {
                 return rs.getInt(1);
+            } else {
+                LOGGER.debug("No homes found for player {}", playerUUID);
+                return 0;
             }
+        } catch (SQLException e) {
+            LOGGER.error("Failed to get home count", e);
+            return 0;
         }
-
-        return 0;
     }
 
     public boolean saveWarp(WarpPosition warp) {
@@ -251,7 +266,7 @@ public class DatabaseManager {
         }
     }
 
-    public boolean warpExists(String warpName) throws Exception {
+    public boolean warpExists(String warpName) {
         String sql = "SELECT count(*) FROM warps WHERE warp_name = ?";
         try (PreparedStatement pstmt = connection.prepareStatement(sql)) {
              pstmt.setString(1, warpName);
@@ -261,8 +276,11 @@ public class DatabaseManager {
                  return rs.getInt(1) > 0;
              } else {
                  LOGGER.debug("Warp '{}' not found", warpName);
-                 throw new NoWarpLocationFoundException("Warp not found");
+                 return false;
              }
+        } catch (SQLException e) {
+            LOGGER.error("Failed to check if warp exists", e);
+            return false;
         }
     }
 
@@ -281,7 +299,7 @@ public class DatabaseManager {
         return 0;
     }
 
-    public WarpPosition getWarp(String warpName) throws Exception {
+    public WarpPosition getWarp(String warpName) {
         String sql = "SELECT * FROM warps WHERE warp_name = ? LIMIT 1";
         try (PreparedStatement pstmt = connection.prepareStatement(sql)) {
             pstmt.setString(1, warpName);
@@ -300,12 +318,15 @@ public class DatabaseManager {
                 );
             } else {
                 LOGGER.debug("Warp '{}' not found", warpName);
-                throw new NoWarpLocationFoundException("Warp not found");
+                return null;
             }
+        } catch (SQLException e) {
+            LOGGER.error("Failed to get warp", e);
+            return null;
         }
     }
 
-    public boolean removeWarp(UUID playerUuid, String warpName) throws Exception {
+    public boolean removeWarp(UUID playerUuid, String warpName) {
         String sql = "DELETE FROM warps WHERE player_uuid = ? AND warp_name = ?";
         try (PreparedStatement pstmt = connection.prepareStatement(sql)) {
             pstmt.setString(1, playerUuid.toString());
@@ -314,6 +335,9 @@ public class DatabaseManager {
             int affected = pstmt.executeUpdate();
             LOGGER.debug("Removed warp '{}' for player {} (affected rows: {})", warpName, playerUuid, affected);
             return affected > 0;
+        } catch (SQLException e) {
+            LOGGER.error("Failed to remove warp", e);
+            return false;
         }
     }
 

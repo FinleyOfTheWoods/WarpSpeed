@@ -1,7 +1,6 @@
 package uk.co.finleyofthewoods.warpspeed.command;
 
 import com.mojang.brigadier.CommandDispatcher;
-import com.mojang.brigadier.arguments.IntegerArgumentType;
 import com.mojang.brigadier.arguments.StringArgumentType;
 import com.mojang.brigadier.context.CommandContext;
 import com.mojang.brigadier.exceptions.CommandSyntaxException;
@@ -21,7 +20,6 @@ import uk.co.finleyofthewoods.warpspeed.utils.WarpPosition;
 
 import java.util.Arrays;
 import java.util.List;
-import java.util.Objects;
 import java.util.concurrent.CompletableFuture;
 
 import static net.minecraft.server.command.CommandManager.argument;
@@ -127,6 +125,12 @@ public class WarpCommand {
             ServerCommandSource source = context.getSource();
             ServerPlayerEntity player = source.getPlayerOrThrow();
             String warpName = StringArgumentType.getString(context, "warpName");
+
+            if (warpName.length() > 32 || !warpName.matches("[a-zA-Z0-9_-]+")) {
+                player.sendMessage(Text.literal("Warp name must be 1-32 alphanumeric characters"), false);
+                return 0;
+            }
+
             boolean privateFlag = StringArgumentType.getString(context, "private").equals("true");
             boolean warpExists = dbManager.warpExists(warpName);
             if (warpExists) {

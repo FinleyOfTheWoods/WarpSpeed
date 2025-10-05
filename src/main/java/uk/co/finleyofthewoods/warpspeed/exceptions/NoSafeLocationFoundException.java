@@ -1,4 +1,4 @@
-package uk.co.finleyofthewoods.warpspeed.Exceptions;
+package uk.co.finleyofthewoods.warpspeed.exceptions;
 
 public class NoSafeLocationFoundException extends Exception {
     /**

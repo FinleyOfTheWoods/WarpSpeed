@@ -14,7 +14,6 @@ import net.minecraft.util.math.BlockPos;
 import net.minecraft.world.World;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import uk.co.finleyofthewoods.warpspeed.Exceptions.NoWarpLocationFoundException;
 import uk.co.finleyofthewoods.warpspeed.utils.DatabaseManager;
 import uk.co.finleyofthewoods.warpspeed.utils.HomePosition;
 import uk.co.finleyofthewoods.warpspeed.utils.TeleportUtils;
@@ -98,6 +97,11 @@ public class HomeCommand {
             String homeName = StringArgumentType.getString(context, "homeName");
             World world = player.getEntityWorld();
 
+            if (homeName.length() > 32 || !homeName.matches("[a-zA-Z0-9_-]+")) {
+                player.sendMessage(Text.literal("Home name must be 1-32 alphanumeric characters"), false);
+                return 0;
+            }
+
             boolean success = TeleportUtils.teleportToHome(player, world, homeName, dbManager);
             if (success) {
                 player.sendMessage(Text.literal("Teleported to home: " + homeName), false);
@@ -170,13 +174,10 @@ public class HomeCommand {
                 return 0;
             }
         } catch(CommandSyntaxException e) {
-            LOGGER.error("Failed to execute /deleteWarp command", e);
-            return 0;
-        } catch (NoWarpLocationFoundException nwlfe) {
-            LOGGER.error("Warp not found: Failed to execute /deleteWarp command", nwlfe);
+            LOGGER.error("Failed to execute /delHome command", e);
             return 0;
         } catch (Exception e) {
-            LOGGER.error("Unexpected Exception: Failed to execute /deleteWarp command", e);
+            LOGGER.error("Unexpected Exception: Failed to execute /delHome command", e);
             return 0;
         }
     }

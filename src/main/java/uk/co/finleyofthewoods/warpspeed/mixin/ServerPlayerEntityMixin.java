@@ -15,4 +15,10 @@ public class ServerPlayerEntityMixin {
         ServerPlayerEntity player = (ServerPlayerEntity) (Object) this;
         PlayerLocationTracker.storeDeathLocation(player);
     }
+
+    @Inject(method = "onDisconnect", at = @At("HEAD"))
+    private void onPlayerDisconnect(CallbackInfo ci) {
+        ServerPlayerEntity player = (ServerPlayerEntity) (Object) this;
+        PlayerLocationTracker.clearPreviousLocation(player);
+    }
 }
