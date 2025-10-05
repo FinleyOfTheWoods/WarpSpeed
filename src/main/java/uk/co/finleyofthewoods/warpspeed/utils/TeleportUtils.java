@@ -1,5 +1,6 @@
 package uk.co.finleyofthewoods.warpspeed.utils;
 
+import net.minecraft.block.BlockState;
 import net.minecraft.block.Blocks;
 import net.minecraft.particle.ParticleTypes;
 import net.minecraft.registry.RegistryKey;
@@ -124,7 +125,7 @@ public class TeleportUtils {
         if (isSafeLocation(world, spawnPos)) {
             return spawnPos;
         }
-        int searchRadius = 3;
+        int searchRadius = 10;
         for (int dx = -searchRadius; dx <= searchRadius; dx++) {
             for (int dy = -searchRadius; dy <= searchRadius; dy++) {
                 for (int dz = -searchRadius; dz <= searchRadius; dz++) {
@@ -143,14 +144,41 @@ public class TeleportUtils {
     private static boolean isSafeLocation(World world, BlockPos pos) {
         BlockPos belowPos = pos.down();
         BlockPos headPos = pos.up();
-        if (!world.getBlockState(belowPos).isSolidBlock(world, belowPos) && !world.getBlockState(belowPos).isOf(Blocks.WATER)) {
+
+        BlockState headState = world.getBlockState(headPos);
+        BlockState feetState = world.getBlockState(pos);
+        BlockState belowState = world.getBlockState(belowPos);
+
+        boolean hasSafeBase = belowState.isSolidBlock(world, belowPos) || belowState.isOf(Blocks.WATER);
+
+        if (!hasSafeBase) {
             return false;
         }
-        if (world.getBlockState(pos).isAir() && world.getBlockState(headPos).isAir()) {
+
+        boolean isHeadSafe = isSafeToStandIn(headState, world, headPos);
+        boolean isFeetSafe = isSafeToStandIn(feetState, world, pos);
+
+        return isHeadSafe && isFeetSafe;
+    }
+
+    private static boolean isSafeToStandIn(BlockState state, World world, BlockPos pos) {
+        if (state.isAir()) {
+            // Air is safe to stand in
             return true;
-        } else if (world.getBlockState(pos).isOf(Blocks.WATER) && world.getBlockState(headPos).isOf(Blocks.WATER)) {
+        } else if (state.isOf(Blocks.WATER)) {
+            // Water is safe to stand
             return true;
+        } else if (!state.isSolidBlock(world, pos)) {
+            // Non-solid blocks are safe to stand in
+            return true;
+        } else if (state.isOf(Blocks.LAVA)) {
+            // Lava is not safe to stand in
+            return false;
+        } else if (state.isOf(Blocks.FIRE) || state.isOf(Blocks.SOUL_FIRE)) {
+            // Fire and soul fire are not safe to stand in
+            return false;
         }
+        // Non-solid blocks are not safe to stand in
         return false;
     }
 
