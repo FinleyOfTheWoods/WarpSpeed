@@ -4,6 +4,7 @@ import com.mojang.brigadier.CommandDispatcher;
 import com.mojang.brigadier.context.CommandContext;
 import net.minecraft.server.command.ServerCommandSource;
 import net.minecraft.server.network.ServerPlayerEntity;
+import net.minecraft.server.world.ServerWorld;
 import net.minecraft.text.Text;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.world.World;
@@ -37,15 +38,17 @@ public class SpawnCommand {
             return 0;
         }
         try {
-            World world = player.getEntityWorld();
-            BlockPos spawnPos = world.getSpawnPoint().getPos();
+            // Get the Overworld (not current dimension)
+            ServerWorld overworld = source.getServer().getWorld(World.OVERWORLD);
+            assert overworld != null;
+            BlockPos spawnPos = overworld.getSpawnPoint().getPos();
             LOGGER.debug("Player {} executed /spawn command. Teleporting to spawn at {} {} {}",
                 player.getName().getString(),
                 spawnPos.getX(),
                 spawnPos.getY(),
                 spawnPos.getZ()
             );
-            boolean success = TeleportUtils.teleportToSpawn(player, world, spawnPos);
+            boolean success = TeleportUtils.teleportToSpawn(player, overworld, spawnPos);
             if (success) {
                 LOGGER.debug("Successfully teleported player {}", player.getName().getString());
                 player.sendMessage(Text.literal("Teleported to spawn!"), false);

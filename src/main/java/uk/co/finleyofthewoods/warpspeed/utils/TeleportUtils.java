@@ -1,9 +1,19 @@
 package uk.co.finleyofthewoods.warpspeed.utils;
 
 import net.minecraft.block.Blocks;
+import net.minecraft.particle.ParticleTypes;
+import net.minecraft.registry.RegistryKey;
+import net.minecraft.registry.RegistryKeys;
+import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.network.ServerPlayerEntity;
+import net.minecraft.server.world.ServerWorld;
+import net.minecraft.sound.SoundCategory;
+import net.minecraft.sound.SoundEvents;
 import net.minecraft.text.Text;
+import net.minecraft.util.Identifier;
 import net.minecraft.util.math.BlockPos;
+import net.minecraft.util.math.Vec3d;
+import net.minecraft.world.TeleportTarget;
 import net.minecraft.world.World;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -20,7 +30,7 @@ public class TeleportUtils {
                     spawnPos.getY(),
                     spawnPos.getZ());
             BlockPos safeLoc = findSafeLocation(world, spawnPos);
-            return teleportPlayer(player, safeLoc);
+            return teleportPlayer(player, world, safeLoc);
         } catch (Exception e) {
             handleException(e);
             return false;
@@ -34,17 +44,19 @@ public class TeleportUtils {
                 LOGGER.warn("Failed to find home for player {}: {}", player.getName().toString(), homeName);
                 return false;
             }
-            String currentWorldId = world.getRegistryKey().getValue().toString();
-            if (!currentWorldId.equals(home.getWorldId())) {
-                LOGGER.warn("Failed to teleport {} to home {}: home is in world {}", player.getName().toString(), homeName, home.getWorldId());
-                return false;
-            }
 
             BlockPos homePos = home.getBlockPos();
             LOGGER.debug("Attempting to teleport {} to ({}, {}, {})",
                     player.getName().toString(), homePos.getX(), homePos.getY(), homePos.getZ());
-            BlockPos safeLoc = findSafeLocation(world, homePos);
-            return teleportPlayer(player, safeLoc);
+            ServerWorld targetWorld = getTargetWorld(player, home.getWorldId());
+            if (targetWorld == null) {
+                LOGGER.warn("Failed to find world {} for warp {}", home.getWorldId(), homeName);
+                player.sendMessage(Text.literal("Failed to teleport: warp world not found"), false);
+                return false;
+            }
+
+            BlockPos safeLoc = findSafeLocation(targetWorld, homePos);
+            return teleportPlayer(player, targetWorld, safeLoc);
         } catch (Exception e) {
             handleException(e);
             return false;
@@ -59,18 +71,18 @@ public class TeleportUtils {
             }
             PlayerLocationTracker.PlayerLocation location = PlayerLocationTracker.getPreviousLocation(player);
             World world = player.getEntityWorld();
-            String currentWorldID = world.getRegistryKey().getValue().toString();
-            if (!currentWorldID.equals(location.getWorldId())) {
-                LOGGER.warn("Failed to teleport {} to last location: last location is in world {}", player.getName().toString(), location.getWorldId());
-                player.sendMessage(Text.literal("Teleportation failed. Last location is in a different world."), false);
-                return false;
-            }
 
             BlockPos pos = location.getBlockPos();
             LOGGER.debug("Attempt to teleport {} back to ({}, {}, {})", player.getName().toString(), pos.getX(), pos.getY(), pos.getZ());
+            ServerWorld targetWorld = getTargetWorld(player, location.getWorldId());
+            if (targetWorld == null) {
+                LOGGER.warn("Failed to find world {} for previous location warp", location.getWorldId());
+                player.sendMessage(Text.literal("Failed to teleport: warp world not found"), false);
+                return false;
+            }
 
-            BlockPos safeLoc = findSafeLocation(world, pos);
-            return teleportPlayer(player, safeLoc);
+            BlockPos safeLoc = findSafeLocation(targetWorld, pos);
+            return teleportPlayer(player, targetWorld, safeLoc);
         } catch (Exception e) {
             handleException(e);
             return false;
@@ -84,12 +96,6 @@ public class TeleportUtils {
                 LOGGER.warn("Failed to find warp for player {}: {}", player.getName().toString(), warpName);
                 return false;
             }
-            String currentWorldId = world.getRegistryKey().getValue().toString();
-            if (!currentWorldId.equals(warp.getWorldId())) {
-                LOGGER.warn("Failed to teleport {} to warp {}: warp is in world {}", player.getName().toString(), warpName, warp.getWorldId());
-                player.sendMessage(Text.literal("Teleportation failed. Warp is in a different world."), false);
-                return false;
-            }
             if (warp.isPrivate() && !warp.getPlayerUUID().equals(player.getUuid())) {
                 LOGGER.warn("Failed to teleport {} to warp {}: warp is private and not owned by player", player.getName().toString(), warpName);
                 player.sendMessage(Text.literal("Teleportation failed. Warp is private and not owned by you."), false);
@@ -98,8 +104,16 @@ public class TeleportUtils {
             BlockPos warpPos = warp.getBlockPos();
             LOGGER.debug("Attempting to teleport {} to ({}, {}, {})",
                     player.getName().toString(), warpPos.getX(), warpPos.getY(), warpPos.getZ());
-            BlockPos safeLoc = findSafeLocation(world, warpPos);
-            return teleportPlayer(player, safeLoc);
+
+            ServerWorld targetWorld = getTargetWorld(player, warp.getWorldId());
+            if (targetWorld == null) {
+                LOGGER.warn("Failed to find world {} for warp {}", warp.getWorldId(), warpName);
+                player.sendMessage(Text.literal("Failed to teleport: warp world not found"), false);
+                return false;
+            }
+
+            BlockPos safeLoc = findSafeLocation(targetWorld, warpPos);
+            return teleportPlayer(player, targetWorld, safeLoc);
         } catch (Exception e) {
             handleException(e);
             return false;
@@ -140,19 +154,53 @@ public class TeleportUtils {
         return false;
     }
 
-    private static boolean teleportPlayer(ServerPlayerEntity player, BlockPos pos) {
+    private static boolean teleportPlayer(ServerPlayerEntity player, World targetWorld, BlockPos pos) {
         // Store current location as previous location. To allow ping-ponging between two locations using /back repeatedly.
         PlayerLocationTracker.storeCurrentLocation(player);
+
 
         double x = pos.getX() + 0.5;
         double y = pos.getY();
         double z = pos.getZ() + 0.5;
-        boolean teleported = player.teleport(x, y, z, true);
+        // Check if cross-dimension teleport is needed
+        ServerWorld currentWorld = player.getEntityWorld();
+        ServerWorld targetServerWorld = (ServerWorld) targetWorld;
+        Vec3d currentPos = player.getEntityPos();
+        boolean teleported;
+
+        // Spawn departure particles and sound
+        spawnTeleportEffects(currentWorld, currentPos, true);
+        if (currentWorld.getRegistryKey() != targetWorld.getRegistryKey()) {
+            // Cross-dimension teleport
+            LOGGER.debug("Cross-dimension teleport from {} to {} for player {}",
+                    currentWorld.getRegistryKey().getValue(),
+                    targetWorld.getRegistryKey().getValue(),
+                    player.getName().toString());
+
+            // Create TeleportTarget for cross-dimension teleportation
+            TeleportTarget target = new TeleportTarget(
+                    targetServerWorld,
+                    new Vec3d(x, y, z),
+                    Vec3d.ZERO,  // velocity set to zero to prevent the player from moving during cross-dimension teleportation
+                    player.getYaw(),
+                    player.getPitch(),
+                    null
+            );
+            ServerPlayerEntity result = player.teleportTo(target);
+            teleported = (result != null);
+        } else {
+            // Same dimension teleport
+            teleported = player.teleport(x, y, z, false);
+        }
         LOGGER.debug("Teleport attempt was {} for player {} at ({}, {}, {})",
                 teleported, player.getName().toString(), x, y, z);
         if (!teleported) {
             LOGGER.warn("failed to teleport {} to spawn at ({}, {}, {})",
                     player.getName().toString(), x, y, z);
+        }
+        if (teleported) {
+            // Spawn arrival particles and sound at destination
+            spawnTeleportEffects(targetServerWorld, new Vec3d(x, y, z), false);
         }
         return teleported;
     }
@@ -163,5 +211,109 @@ public class TeleportUtils {
         } else {
             LOGGER.error("Unexpected error during teleport: {}", e.getMessage());
         }
+    }
+
+    /**
+     * Spawns particle effects and plays sounds for teleportation
+     * @param world The world to spawn effects in
+     * @param pos The position to spawn effects at
+     * @param isDeparture True for departure effects, false for arrival effects
+     */
+    private static void spawnTeleportEffects(ServerWorld world, Vec3d pos, boolean isDeparture) {
+        // Spawn particle effects
+        if (isDeparture) {
+            // Departure: Purple portal particles spiraling upward
+            for (int i = 0; i < 50; i++) {
+                double offsetX = (Math.random() - 0.5) * 1.5;
+                double offsetY = Math.random() * 2;
+                double offsetZ = (Math.random() - 0.5) * 1.5;
+
+                world.spawnParticles(
+                        ParticleTypes.PORTAL,
+                        pos.x + offsetX,
+                        pos.y + offsetY,
+                        pos.z + offsetZ,
+                        1,  // count
+                        0.2, // deltaX
+                        0.5, // deltaY
+                        0.2, // deltaZ
+                        0.1  // speed
+                );
+            }
+
+            // Additional enchant glint effect
+            for (int i = 0; i < 20; i++) {
+                double offsetX = (Math.random() - 0.5);
+                double offsetY = Math.random() * 2;
+                double offsetZ = (Math.random() - 0.5);
+
+                world.spawnParticles(
+                        ParticleTypes.SOUL_FIRE_FLAME,
+                        pos.x + offsetX,
+                        pos.y + offsetY,
+                        pos.z + offsetZ,
+                        1,
+                        0, 0, 0, 0
+                );
+            }
+
+            // Play departure sound
+            world.playSound(
+                    null,  // player (null = everyone hears it)
+                    pos.x, pos.y, pos.z,
+                    SoundEvents.ITEM_CHORUS_FRUIT_TELEPORT,
+                    SoundCategory.PLAYERS,
+                    1.0f,  // volume
+                    1.0f   // pitch
+            );
+        } else {
+            // Arrival: Explosion of particles
+            for (int i = 0; i < 50; i++) {
+                double offsetX = (Math.random() - 0.5) * 1.5;
+                double offsetY = Math.random() * 2;
+                double offsetZ = (Math.random() - 0.5) * 1.5;
+
+                world.spawnParticles(
+                        ParticleTypes.SOUL_FIRE_FLAME,
+                        pos.x + offsetX,
+                        pos.y + offsetY,
+                        pos.z + offsetZ,
+                        1,
+                        0.2, 0.5, 0.2, 0.1
+                );
+            }
+
+            // Poof effect on arrival
+            world.spawnParticles(
+                    ParticleTypes.POOF,
+                    pos.x, pos.y + 0.5, pos.z,
+                    30,  // count
+                    0.5, 0.5, 0.5,  // delta
+                    0.05  // speed
+            );
+
+            // Play arrival sound
+            world.playSound(
+                    null,
+                    pos.x, pos.y, pos.z,
+                    SoundEvents.ITEM_CHORUS_FRUIT_TELEPORT,
+                    SoundCategory.PLAYERS,
+                    1.0f,
+                    1.2f  // slightly higher pitch for arrival
+            );
+        }
+    }
+
+    private static ServerWorld getTargetWorld(ServerPlayerEntity player, String targetWorldId) {
+        // Get the target world from the server
+        MinecraftServer server = player.getCommandSource().getServer();
+        if (server == null) {
+            LOGGER.error("Server is null for player {}", player.getName().toString());
+            return null;
+        }
+        // Parse the world ID and get the world
+        RegistryKey<World> worldKey = RegistryKey.of(RegistryKeys.WORLD, Identifier.tryParse(targetWorldId));
+        ServerWorld targetWorld = server.getWorld(worldKey);
+        return targetWorld;
     }
 }
