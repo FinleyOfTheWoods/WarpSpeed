@@ -166,7 +166,6 @@ Built with:
 For issues, questions, or suggestions:
 - Open an [Issue](../../issues) on GitHub
 - Check existing issues for solutions
-- 
 ---
 
 **Note**: This mod is designed for Fabric. It will not work with Forge or other mod loaders.
