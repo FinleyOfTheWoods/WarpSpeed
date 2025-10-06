@@ -186,7 +186,7 @@ public class DatabaseManager {
      * Removes a home from the database.
      */
     public boolean removeHome(UUID playerUUID, String homeName) {
-        String sql = "DELETE FROM homes WHERE player_uuid = ? AND home_name = ? LIMIT 1";
+        String sql = "DELETE FROM homes WHERE player_uuid = ? AND home_name = ?";
 
         try (PreparedStatement pstmt = connection.prepareStatement(sql)) {
             pstmt.setString(1, playerUUID.toString());
