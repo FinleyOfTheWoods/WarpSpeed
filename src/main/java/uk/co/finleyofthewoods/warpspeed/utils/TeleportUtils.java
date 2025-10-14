@@ -152,7 +152,9 @@ public class TeleportUtils {
         BlockState feetState = world.getBlockState(pos);
         BlockState belowState = world.getBlockState(belowPos);
 
-        boolean hasSafeBase = belowState.isSolidBlock(world, belowPos) || belowState.isOf(Blocks.WATER);
+        boolean hasSafeBase = belowState.isSolidBlock(world, belowPos)
+                || belowState.isOf(Blocks.WATER)
+                || !belowState.isAir() && isSafeToStandIn(belowState, world, belowPos);
 
         if (!hasSafeBase) {
             return false;
