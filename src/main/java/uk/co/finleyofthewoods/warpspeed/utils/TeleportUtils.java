@@ -1,5 +1,6 @@
 package uk.co.finleyofthewoods.warpspeed.utils;
 
+import net.minecraft.block.Block;
 import net.minecraft.block.BlockState;
 import net.minecraft.block.Blocks;
 import net.minecraft.fluid.Fluids;
@@ -20,6 +21,9 @@ import net.minecraft.world.World;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import uk.co.finleyofthewoods.warpspeed.exceptions.NoSafeLocationFoundException;
+
+import java.util.Arrays;
+import java.util.List;
 
 public class TeleportUtils {
     private static final Logger LOGGER = LoggerFactory.getLogger(TeleportUtils.class);
@@ -154,7 +158,7 @@ public class TeleportUtils {
 
         boolean hasSafeBase = belowState.isSolidBlock(world, belowPos)
                 || belowState.isOf(Blocks.WATER)
-                || !belowState.isAir() && isSafeToStandIn(belowState, world, belowPos);
+                || !belowState.isAir() && isSafeToStandOn(belowState, world, belowPos);
 
         if (!hasSafeBase) {
             return false;
@@ -166,15 +170,42 @@ public class TeleportUtils {
         return isHeadSafe && isFeetSafe;
     }
 
+    private static final List<Block> carpets = Arrays.asList(
+            Blocks.WHITE_CARPET,
+            Blocks.ORANGE_CARPET,
+            Blocks.MAGENTA_CARPET,
+            Blocks.LIGHT_BLUE_CARPET,
+            Blocks.YELLOW_CARPET,
+            Blocks.LIME_CARPET,
+            Blocks.PINK_CARPET,
+            Blocks.GRAY_CARPET,
+            Blocks.LIGHT_GRAY_CARPET,
+            Blocks.CYAN_CARPET,
+            Blocks.PURPLE_CARPET,
+            Blocks.BLUE_CARPET,
+            Blocks.BROWN_CARPET,
+            Blocks.GREEN_CARPET,
+            Blocks.RED_CARPET,
+            Blocks.BLACK_CARPET
+    );
+
+    private static boolean isSafeToStandOn(BlockState state, World world, BlockPos pos) {
+        for (Block carpet : carpets) {
+            if (state.isOf(carpet)) {
+                return true;
+            }
+        }
+        // Check for slabs (they're not full solid blocks)
+        // This catches slabs, pressure plates, etc.
+        return !state.isSolidBlock(world, pos) && !state.isAir();
+    }
+
     private static boolean isSafeToStandIn(BlockState state, World world, BlockPos pos) {
         if (state.isAir()) {
             // Air is safe to stand in
             return true;
         } else if (state.isOf(Blocks.WATER) || state.getFluidState().isOf(Fluids.WATER)) {
             // Water is safe to stand
-            return true;
-        } else if (!state.isSolidBlock(world, pos)) {
-            // Non-solid blocks are safe to stand in
             return true;
         } else if (state.getFluidState().isOf(Fluids.LAVA) || state.getFluidState().isOf(Fluids.FLOWING_LAVA)) {
             // Lava is not safe to stand in
