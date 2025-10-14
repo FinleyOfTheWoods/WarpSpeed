@@ -1,12 +1,13 @@
 package uk.co.finleyofthewoods.warpspeed.utils;
 
-import net.minecraft.block.Block;
 import net.minecraft.block.BlockState;
 import net.minecraft.block.Blocks;
 import net.minecraft.fluid.Fluids;
 import net.minecraft.particle.ParticleTypes;
 import net.minecraft.registry.RegistryKey;
 import net.minecraft.registry.RegistryKeys;
+import net.minecraft.registry.tag.BlockTags;
+import net.minecraft.registry.tag.ItemTags;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.network.ServerPlayerEntity;
 import net.minecraft.server.world.ServerWorld;
@@ -22,8 +23,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import uk.co.finleyofthewoods.warpspeed.exceptions.NoSafeLocationFoundException;
 
-import java.util.Arrays;
-import java.util.List;
 
 public class TeleportUtils {
     private static final Logger LOGGER = LoggerFactory.getLogger(TeleportUtils.class);
@@ -35,7 +34,7 @@ public class TeleportUtils {
                     spawnPos.getX(),
                     spawnPos.getY(),
                     spawnPos.getZ());
-            BlockPos safeLoc = findSafeLocation(world, spawnPos);
+            BlockPos safeLoc = findSafeLocation(world, spawnPos, player);
             return teleportPlayer(player, world, safeLoc);
         } catch (Exception e) {
             handleException(e, "Failed to teleport to spawn", player);
@@ -62,7 +61,7 @@ public class TeleportUtils {
                 return false;
             }
 
-            BlockPos safeLoc = findSafeLocation(targetWorld, homePos);
+            BlockPos safeLoc = findSafeLocation(targetWorld, homePos, player);
             return teleportPlayer(player, targetWorld, safeLoc);
         } catch (Exception e) {
             handleException(e, "Failed to teleport to home " + homeName, player);
@@ -88,7 +87,7 @@ public class TeleportUtils {
                 return false;
             }
 
-            BlockPos safeLoc = findSafeLocation(targetWorld, pos);
+            BlockPos safeLoc = findSafeLocation(targetWorld, pos, player);
             return teleportPlayer(player, targetWorld, safeLoc);
         } catch (Exception e) {
             handleException(e, "Failed to teleport to last location", player);
@@ -120,7 +119,7 @@ public class TeleportUtils {
                 return false;
             }
 
-            BlockPos safeLoc = findSafeLocation(targetWorld, warpPos);
+            BlockPos safeLoc = findSafeLocation(targetWorld, warpPos, player);
             return teleportPlayer(player, targetWorld, safeLoc);
         } catch (Exception e) {
             handleException(e, "Failed to teleport to warp " + warpName, player);
@@ -128,18 +127,30 @@ public class TeleportUtils {
         }
     }
 
-    public static BlockPos findSafeLocation(World world, BlockPos spawnPos) throws NoSafeLocationFoundException {
-        if (isSafeLocation(world, spawnPos)) {
+    public static BlockPos findSafeLocation(World world, BlockPos spawnPos, ServerPlayerEntity player) throws NoSafeLocationFoundException {
+        if (isSafeLocation(world, spawnPos, player)) {
             return spawnPos;
         }
         int searchRadius = 10;
-        for (int dx = -searchRadius; dx <= searchRadius; dx++) {
-            for (int dy = -searchRadius; dy <= searchRadius; dy++) {
-                for (int dz = -searchRadius; dz <= searchRadius; dz++) {
-                    BlockPos pos = spawnPos.add(dx, dy, dz);
-                    if (isSafeLocation(world, pos)) {
-                        LOGGER.debug("Found safe location at offset ({}, {}, {}) from location", dx, dy, dz);
-                        return pos;
+        // Search in expanding spheres - check nearest positions first
+        for (int radius = 1; radius <= searchRadius; radius++) {
+            // Check all positions at this distance
+            for (int dx = -radius; dx <= radius; dx++) {
+                for (int dy = -radius; dy <= radius; dy++) {
+                    for (int dz = -radius; dz <= radius; dz++) {
+                        // Only check positions that are actually at this radius
+                        // (on the "shell" of the sphere, not inside it)
+                        int maxComponent = Math.max(Math.abs(dx), Math.max(Math.abs(dy), Math.abs(dz)));
+                        if (maxComponent != radius) {
+                            continue; // Skip, this position was checked in a previous iteration
+                        }
+
+                        BlockPos pos = spawnPos.add(dx, dy, dz);
+                        if (isSafeLocation(world, pos, player)) {
+                            LOGGER.debug("Found safe location at distance {} with offset ({}, {}, {}) from location",
+                                    radius, dx, dy, dz);
+                            return pos;
+                        }
                     }
                 }
             }
@@ -148,7 +159,7 @@ public class TeleportUtils {
         throw new NoSafeLocationFoundException("Failed to find safe location");
     }
 
-    private static boolean isSafeLocation(World world, BlockPos pos) {
+    private static boolean isSafeLocation(World world, BlockPos pos, ServerPlayerEntity player) {
         BlockPos belowPos = pos.down();
         BlockPos headPos = pos.up();
 
@@ -156,123 +167,155 @@ public class TeleportUtils {
         BlockState feetState = world.getBlockState(pos);
         BlockState belowState = world.getBlockState(belowPos);
 
-        boolean hasSafeBase = belowState.isSolidBlock(world, belowPos)
+        boolean hasSafeBase = belowState.isSolidBlock(world, pos)
                 || belowState.isOf(Blocks.WATER)
-                || !belowState.isAir() && isSafeToStandOn(belowState, world, belowPos);
+                || !belowState.getFluidState().isEmpty()
+                || isSafeToStandIn(belowState, world, belowPos, player);
 
         if (!hasSafeBase) {
+            player.sendMessage(Text.literal("No safe base found"));
             return false;
         }
 
-        boolean isHeadSafe = isSafeToStandIn(headState, world, headPos);
-        boolean isFeetSafe = isSafeToStandIn(feetState, world, pos);
-
-        return isHeadSafe && isFeetSafe;
-    }
-
-    private static final List<Block> carpets = Arrays.asList(
-            Blocks.WHITE_CARPET,
-            Blocks.ORANGE_CARPET,
-            Blocks.MAGENTA_CARPET,
-            Blocks.LIGHT_BLUE_CARPET,
-            Blocks.YELLOW_CARPET,
-            Blocks.LIME_CARPET,
-            Blocks.PINK_CARPET,
-            Blocks.GRAY_CARPET,
-            Blocks.LIGHT_GRAY_CARPET,
-            Blocks.CYAN_CARPET,
-            Blocks.PURPLE_CARPET,
-            Blocks.BLUE_CARPET,
-            Blocks.BROWN_CARPET,
-            Blocks.GREEN_CARPET,
-            Blocks.RED_CARPET,
-            Blocks.BLACK_CARPET
-    );
-
-    private static boolean isSafeToStandOn(BlockState state, World world, BlockPos pos) {
-        for (Block carpet : carpets) {
-            if (state.isOf(carpet)) {
-                return true;
-            }
+        boolean isHeadSafe = isSafeToStandIn(headState, world, headPos, player);
+        boolean isFeetSafe = isSafeToStandIn(feetState, world, pos, player);
+        if (!isHeadSafe || !isFeetSafe) {
+            player.sendMessage(Text.literal("Head or feet are unsafe"));
+            return false;
         }
-        // Check for slabs (they're not full solid blocks)
-        // This catches slabs, pressure plates, etc.
-        return !state.isSolidBlock(world, pos) && !state.isAir();
+        player.sendMessage(Text.literal("Teleporting to safe location"));
+        return true;
     }
 
-    private static boolean isSafeToStandIn(BlockState state, World world, BlockPos pos) {
+
+    private static boolean isSafeToStandIn(BlockState state, World world, BlockPos pos, ServerPlayerEntity player) {
         if (state.isAir()) {
-            // Air is safe to stand in
-            return true;
-        } else if (state.isOf(Blocks.WATER) || state.getFluidState().isOf(Fluids.WATER)) {
-            // Water is safe to stand
-            return true;
-        } else if (state.getFluidState().isOf(Fluids.LAVA) || state.getFluidState().isOf(Fluids.FLOWING_LAVA)) {
-            // Lava is not safe to stand in
-            return false;
-        } else if (state.isOf(Blocks.SWEET_BERRY_BUSH) || state.isOf(Blocks.CACTUS)) {
-            // Cactus and sweet berry bushes are not safe to stand in
-            return false;
-        } else if (state.isOf(Blocks.FIRE) || state.isOf(Blocks.SOUL_FIRE)) {
-            // Fire and soul fire are not safe to stand in
-            return false;
-        } else if (!state.isSolidBlock(world, pos)) {
-            // Non-solid blocks (carpets, slabs, flowers, tall grass, etc.) are safe to stand in/on
             return true;
         }
+
+        // Safe fluids
+        if (state.isOf(Blocks.WATER) || state.getFluidState().isOf(Fluids.WATER)) {
+            return true;
+        }
+
+        // Sweet berry bushes are dangerous when mature
+        if (state.isOf(Blocks.SWEET_BERRY_BUSH)) {
+            return false;
+        }
+
+        // Dangerous fluids
+        if (state.getFluidState().isOf(Fluids.LAVA) || state.getFluidState().isOf(Fluids.FLOWING_LAVA)) {
+            player.sendMessage(Text.literal("message.warpspeed.teleport.dangerous_fluid"), false);
+            return false;
+        }
+
+        // Dangerous blocks where available
+        if (state.isOf(Blocks.FIRE) || state.isOf(Blocks.SOUL_FIRE) ||
+                state.isOf(Blocks.CACTUS) || state.isOf(Blocks.MAGMA_BLOCK) ||
+                state.isOf(Blocks.WITHER_ROSE) || state.isOf(Blocks.POWDER_SNOW) ||
+                state.isIn(BlockTags.CAMPFIRES)) {
+            return false;
+        }
+
+        // Passable/decorative blocks that are safe
+        if (state.isIn(BlockTags.WOOL_CARPETS) ||
+                state.isIn(BlockTags.FLOWERS) ||
+                state.isIn(BlockTags.SAPLINGS) ||
+                state.isIn(BlockTags.CROPS) ||
+                state.isIn(BlockTags.FLOWER_POTS) ||
+                state.isIn(BlockTags.CAVE_VINES) ||
+                state.isIn(BlockTags.REPLACEABLE)) {
+            return true;
+        }
+
+        // Safe blocks to stand on
+        if (state.isIn(BlockTags.SLABS)
+                || state.isIn(BlockTags.STONE_PRESSURE_PLATES)
+                || state.isIn(BlockTags.STONE_BUTTONS)
+                || state.isIn(BlockTags.VALID_SPAWN)
+                || state.isIn(BlockTags.TRAPDOORS)
+                || state.isIn(BlockTags.DOORS)
+                || state.isIn(BlockTags.SIGNS)
+                || state.isIn(BlockTags.WALL_SIGNS)
+                || state.isIn(BlockTags.STAIRS)
+                || state.isIn(BlockTags.ALL_SIGNS)
+                || state.isIn(BlockTags.ALL_HANGING_SIGNS)
+                || state.isIn(BlockTags.WOODEN_SLABS)
+                || state.isIn(BlockTags.WOODEN_STAIRS)
+                || state.isIn(BlockTags.WOODEN_PRESSURE_PLATES)
+                || state.isIn(BlockTags.WOODEN_BUTTONS)
+                || state.isIn(BlockTags.WOODEN_TRAPDOORS)
+                || state.isIn(BlockTags.WOODEN_DOORS)
+                || state.isIn(BlockTags.BANNERS)
+                || state.isIn(BlockTags.BEDS)
+                || state.isIn(BlockTags.BUTTONS)) {
+            return true;
+        }
+
         // Non-solid blocks are not safe to stand in
         return false;
     }
 
-    private static boolean teleportPlayer(ServerPlayerEntity player, World targetWorld, BlockPos pos) {
-        // Store current location as previous location. To allow ping-ponging between two locations using /back repeatedly.
-        PlayerLocationTracker.storeCurrentLocation(player);
 
+    private static boolean teleportPlayer(ServerPlayerEntity player, World targetWorld, BlockPos pos) {
+        // Store current location as previous location
+        PlayerLocationTracker.storeCurrentLocation(player);
 
         double x = pos.getX() + 0.5;
         double y = pos.getY();
         double z = pos.getZ() + 0.5;
+
         // Check if cross-dimension teleport is needed
         ServerWorld currentWorld = player.getEntityWorld();
         ServerWorld targetServerWorld = (ServerWorld) targetWorld;
         Vec3d currentPos = player.getEntityPos();
         boolean teleported;
 
+        LOGGER.debug("Attempting teleport to ({}, {}, {}) in world {}", x, y, z, targetWorld.getRegistryKey().getValue());
+
         // Spawn departure particles and sound
         spawnTeleportEffects(currentWorld, currentPos, true);
-        if (currentWorld.getRegistryKey() != targetWorld.getRegistryKey()) {
+
+        try {
+
             // Cross-dimension teleport
             LOGGER.debug("Cross-dimension teleport from {} to {} for player {}",
                     currentWorld.getRegistryKey().getValue(),
                     targetWorld.getRegistryKey().getValue(),
-                    player.getName().toString());
+                    player.getName().getString());
 
             // Create TeleportTarget for cross-dimension teleportation
             TeleportTarget target = new TeleportTarget(
                     targetServerWorld,
                     new Vec3d(x, y, z),
-                    Vec3d.ZERO,  // velocity set to zero to prevent the player from moving during cross-dimension teleportation
+                    Vec3d.ZERO,  // velocity set to zero
                     player.getYaw(),
                     player.getPitch(),
                     TeleportTarget.NO_OP
             );
             ServerPlayerEntity result = player.teleportTo(target);
             teleported = (result != null);
-        } else {
-            // Same dimension teleport
-            teleported = player.teleport(x, y, z, false);
+
+            LOGGER.debug("Teleport result: {}", teleported);
+
+            if (teleported) {
+                // Spawn arrival particles and sound at destination
+                spawnTeleportEffects(targetServerWorld, new Vec3d(x, y, z), false);
+                player.sendMessage(Text.literal("§aTeleportation successful!"), false);
+            } else {
+                player.sendMessage(Text.literal("§cTeleportation failed: Unable to complete teleport"), false);
+                LOGGER.warn("Teleport returned false for player {} at ({}, {}, {})",
+                        player.getName().getString(), x, y, z);
+            }
+
+            return teleported;
+
+        } catch (Exception e) {
+            player.sendMessage(Text.literal("§cTeleportation failed: " + e.getMessage()), false);
+            LOGGER.error("Exception during teleport for player {} to ({}, {}, {}): {}",
+                    player.getName().getString(), x, y, z, e.getMessage(), e);
+            return false;
         }
-        LOGGER.debug("Teleport attempt was {} for player {} at ({}, {}, {})",
-                teleported, player.getName().toString(), x, y, z);
-        if (!teleported) {
-            LOGGER.warn("failed to teleport {} to spawn at ({}, {}, {})",
-                    player.getName().toString(), x, y, z);
-        }
-        if (teleported) {
-            // Spawn arrival particles and sound at destination
-            spawnTeleportEffects(targetServerWorld, new Vec3d(x, y, z), false);
-        }
-        return teleported;
     }
 
     private static void handleException(Exception e, String message, ServerPlayerEntity player) {
