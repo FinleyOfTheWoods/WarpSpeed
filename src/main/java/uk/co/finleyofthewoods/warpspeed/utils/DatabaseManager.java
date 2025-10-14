@@ -33,7 +33,24 @@ public class DatabaseManager {
         }
     }
 
+    private void ensureConnection() throws SQLException {
+        if (connection == null || connection.isClosed()) {
+            LOGGER.warn("Database connection was closed, reopening...");
+            String url = "jdbc:sqlite:" + DB_FILE;
+            connection = DriverManager.getConnection(url);
+
+            // Reconfigure connection
+            Statement stmt = connection.createStatement();
+            stmt.execute("PRAGMA journal_mode=WAL;");
+            stmt.execute("PRAGMA busy_timeout=5000;");
+            stmt.close();
+
+            LOGGER.info("Database connection re-established");
+        }
+    }
+
     private void createTables() throws SQLException {
+        ensureConnection();
         String createHomesTableSQL = """
                     CREATE TABLE IF NOT EXISTS homes (
                         id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -100,19 +117,21 @@ public class DatabaseManager {
                 created_at = excluded.created_at
         """;
 
-        try (PreparedStatement pstmt = connection.prepareStatement(sql)) {
-            pstmt.setString(1, home.getPlayerUUID().toString());
-            pstmt.setString(2, home.getHomeName());
-            pstmt.setString(3, home.getWorldId());
-            pstmt.setInt(4, home.getX());
-            pstmt.setInt(5, home.getY());
-            pstmt.setInt(6, home.getZ());
-            pstmt.setLong(7, home.getCreatedAt());
+        try {
+            ensureConnection();
+            try (PreparedStatement pstmt = connection.prepareStatement(sql)) {
+                pstmt.setString(1, home.getPlayerUUID().toString());
+                pstmt.setString(2, home.getHomeName());
+                pstmt.setString(3, home.getWorldId());
+                pstmt.setInt(4, home.getX());
+                pstmt.setInt(5, home.getY());
+                pstmt.setInt(6, home.getZ());
+                pstmt.setLong(7, home.getCreatedAt());
 
-            int affected = pstmt.executeUpdate();
-            LOGGER.debug("Saved home '{}' for player {}", home.getHomeName(), home.getPlayerUUID());
-            return affected > 0;
-
+                int affected = pstmt.executeUpdate();
+                LOGGER.debug("Saved home '{}' for player {}", home.getHomeName(), home.getPlayerUUID());
+                return affected > 0;
+            }
         } catch (SQLException e) {
             LOGGER.error("Failed to save home", e);
             return false;
@@ -125,24 +144,27 @@ public class DatabaseManager {
     public HomePosition getHome(UUID playerUUID, String homeName) {
         String sql = "SELECT * FROM homes WHERE player_uuid = ? AND home_name = ? LIMIT 1";
 
-        try (PreparedStatement pstmt = connection.prepareStatement(sql)) {
-            pstmt.setString(1, playerUUID.toString());
-            pstmt.setString(2, homeName);
+        try {
+            ensureConnection();
+            try (PreparedStatement pstmt = connection.prepareStatement(sql)) {
+                pstmt.setString(1, playerUUID.toString());
+                pstmt.setString(2, homeName);
 
-            ResultSet rs = pstmt.executeQuery();
-            if (rs.next()) {
-                return new HomePosition(
-                        UUID.fromString(rs.getString("player_uuid")),
-                        rs.getString("home_name"),
-                        rs.getString("world_id"),
-                        rs.getInt("x"),
-                        rs.getInt("y"),
-                        rs.getInt("z"),
-                        rs.getLong("created_at")
-                );
-            } else {
-                LOGGER.debug("Home '{}' not found", homeName);
-                return null;
+                ResultSet rs = pstmt.executeQuery();
+                if (rs.next()) {
+                    return new HomePosition(
+                            UUID.fromString(rs.getString("player_uuid")),
+                            rs.getString("home_name"),
+                            rs.getString("world_id"),
+                            rs.getInt("x"),
+                            rs.getInt("y"),
+                            rs.getInt("z"),
+                            rs.getLong("created_at")
+                    );
+                } else {
+                    LOGGER.debug("Home '{}' not found", homeName);
+                    return null;
+                }
             }
         } catch (SQLException e) {
             LOGGER.error("Failed to get home", e);
@@ -157,20 +179,23 @@ public class DatabaseManager {
         List<HomePosition> homes = new ArrayList<>();
         String sql = "SELECT * FROM homes WHERE player_uuid = ? ORDER BY home_name";
 
-        try (PreparedStatement pstmt = connection.prepareStatement(sql)) {
-            pstmt.setString(1, playerUUID.toString());
+        try {
+            ensureConnection();
+            try (PreparedStatement pstmt = connection.prepareStatement(sql)) {
+                pstmt.setString(1, playerUUID.toString());
 
-            ResultSet rs = pstmt.executeQuery();
-            while (rs.next()) {
-                homes.add(new HomePosition(
-                        UUID.fromString(rs.getString("player_uuid")),
-                        rs.getString("home_name"),
-                        rs.getString("world_id"),
-                        rs.getInt("x"),
-                        rs.getInt("y"),
-                        rs.getInt("z"),
-                        rs.getLong("created_at")
-                ));
+                ResultSet rs = pstmt.executeQuery();
+                while (rs.next()) {
+                    homes.add(new HomePosition(
+                            UUID.fromString(rs.getString("player_uuid")),
+                            rs.getString("home_name"),
+                            rs.getString("world_id"),
+                            rs.getInt("x"),
+                            rs.getInt("y"),
+                            rs.getInt("z"),
+                            rs.getLong("created_at")
+                    ));
+                }
             }
         } catch (SQLException e) {
             LOGGER.error("Failed to get player homes", e);
@@ -188,13 +213,16 @@ public class DatabaseManager {
     public boolean removeHome(UUID playerUUID, String homeName) {
         String sql = "DELETE FROM homes WHERE player_uuid = ? AND home_name = ?";
 
-        try (PreparedStatement pstmt = connection.prepareStatement(sql)) {
-            pstmt.setString(1, playerUUID.toString());
-            pstmt.setString(2, homeName);
+        try {
+            ensureConnection();
+            try (PreparedStatement pstmt = connection.prepareStatement(sql)) {
+                pstmt.setString(1, playerUUID.toString());
+                pstmt.setString(2, homeName);
 
-            int affected = pstmt.executeUpdate();
-            LOGGER.debug("Removed home '{}' for player {} (affected rows: {})", homeName, playerUUID, affected);
-            return affected > 0;
+                int affected = pstmt.executeUpdate();
+                LOGGER.debug("Removed home '{}' for player {} (affected rows: {})", homeName, playerUUID, affected);
+                return affected > 0;
+            }
         } catch (SQLException e) {
             LOGGER.error("Failed to remove home", e);
             return false;
@@ -207,16 +235,19 @@ public class DatabaseManager {
     public boolean homeExists(UUID playerUUID, String homeName) {
         String sql = "SELECT COUNT(*) FROM homes WHERE player_uuid = ? AND home_name = ?";
 
-        try (PreparedStatement pstmt = connection.prepareStatement(sql)) {
-            pstmt.setString(1, playerUUID.toString());
-            pstmt.setString(2, homeName);
+        try {
+            ensureConnection();
+            try (PreparedStatement pstmt = connection.prepareStatement(sql)) {
+                pstmt.setString(1, playerUUID.toString());
+                pstmt.setString(2, homeName);
 
-            ResultSet rs = pstmt.executeQuery();
-            if (rs.next()) {
-                return rs.getInt(1) > 0;
-            } else {
-                LOGGER.debug("Home '{}' not found", homeName);
-                return false;
+                ResultSet rs = pstmt.executeQuery();
+                if (rs.next()) {
+                    return rs.getInt(1) > 0;
+                } else {
+                    LOGGER.debug("Home '{}' not found", homeName);
+                    return false;
+                }
             }
         } catch (SQLException e) {
             return false;
@@ -229,15 +260,18 @@ public class DatabaseManager {
     public int getHomeCount(UUID playerUUID) {
         String sql = "SELECT COUNT(*) FROM homes WHERE player_uuid = ?";
 
-        try (PreparedStatement pstmt = connection.prepareStatement(sql)) {
-            pstmt.setString(1, playerUUID.toString());
+        try {
+            ensureConnection();
+            try (PreparedStatement pstmt = connection.prepareStatement(sql)) {
+                pstmt.setString(1, playerUUID.toString());
 
-            ResultSet rs = pstmt.executeQuery();
-            if (rs.next()) {
-                return rs.getInt(1);
-            } else {
-                LOGGER.debug("No homes found for player {}", playerUUID);
-                return 0;
+                ResultSet rs = pstmt.executeQuery();
+                if (rs.next()) {
+                    return rs.getInt(1);
+                } else {
+                    LOGGER.debug("No homes found for player {}", playerUUID);
+                    return 0;
+                }
             }
         } catch (SQLException e) {
             LOGGER.error("Failed to get home count", e);
@@ -247,19 +281,22 @@ public class DatabaseManager {
 
     public boolean saveWarp(WarpPosition warp) {
         String sql = "INSERT INTO warps (player_uuid, warp_name, world_id, x, y, z, is_private, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)";
-        try (PreparedStatement pstmt = connection.prepareStatement(sql)) {
-            pstmt.setString(1, warp.getPlayerUUID().toString());
-            pstmt.setString(2, warp.getWarpName());
-            pstmt.setString(3, warp.getWorldId());
-            pstmt.setInt(4, warp.getX());
-            pstmt.setInt(5, warp.getY());
-            pstmt.setInt(6, warp.getZ());
-            pstmt.setBoolean(7, warp.isPrivate());
-            pstmt.setLong(8, warp.getCreatedAt());
+        try {
+            ensureConnection();
+            try (PreparedStatement pstmt = connection.prepareStatement(sql)) {
+                pstmt.setString(1, warp.getPlayerUUID().toString());
+                pstmt.setString(2, warp.getWarpName());
+                pstmt.setString(3, warp.getWorldId());
+                pstmt.setInt(4, warp.getX());
+                pstmt.setInt(5, warp.getY());
+                pstmt.setInt(6, warp.getZ());
+                pstmt.setBoolean(7, warp.isPrivate());
+                pstmt.setLong(8, warp.getCreatedAt());
 
-            int affected = pstmt.executeUpdate();
-            LOGGER.debug("Saved warp '{}' for player {}", warp.getWarpName(), warp.getPlayerUUID());
-            return affected > 0;
+                int affected = pstmt.executeUpdate();
+                LOGGER.debug("Saved warp '{}' for player {}", warp.getWarpName(), warp.getPlayerUUID());
+                return affected > 0;
+            }
         } catch (SQLException e) {
             LOGGER.error("Failed to save warp", e);
             return false;
@@ -268,16 +305,19 @@ public class DatabaseManager {
 
     public boolean warpExists(String warpName) {
         String sql = "SELECT count(*) FROM warps WHERE warp_name = ?";
-        try (PreparedStatement pstmt = connection.prepareStatement(sql)) {
-             pstmt.setString(1, warpName);
+        try {
+            ensureConnection();
+            try (PreparedStatement pstmt = connection.prepareStatement(sql)) {
+                 pstmt.setString(1, warpName);
 
-             ResultSet rs = pstmt.executeQuery();
-             if (rs.next()) {
-                 return rs.getInt(1) > 0;
-             } else {
-                 LOGGER.debug("Warp '{}' not found", warpName);
-                 return false;
-             }
+                 ResultSet rs = pstmt.executeQuery();
+                 if (rs.next()) {
+                     return rs.getInt(1) > 0;
+                 } else {
+                     LOGGER.debug("Warp '{}' not found", warpName);
+                     return false;
+                 }
+            }
         } catch (SQLException e) {
             LOGGER.error("Failed to check if warp exists", e);
             return false;
@@ -286,12 +326,15 @@ public class DatabaseManager {
 
     public int getWarpCount(UUID playerUUUID) {
         String sql = "SELECT count(*) FROM warps WHERE player_uuid = ?";
+        try {
+            ensureConnection();
         try (PreparedStatement pstmt = connection.prepareStatement(sql)) {
             pstmt.setString(1, playerUUUID.toString());
 
             ResultSet rs = pstmt.executeQuery();
             if (rs.next()) {
                 return rs.getInt(1);
+            }
             }
         } catch (SQLException e) {
             LOGGER.error("Failed to get warp count", e);
@@ -301,24 +344,27 @@ public class DatabaseManager {
 
     public WarpPosition getWarp(String warpName) {
         String sql = "SELECT * FROM warps WHERE warp_name = ? LIMIT 1";
-        try (PreparedStatement pstmt = connection.prepareStatement(sql)) {
-            pstmt.setString(1, warpName);
+        try {
+            ensureConnection();
+            try (PreparedStatement pstmt = connection.prepareStatement(sql)) {
+                pstmt.setString(1, warpName);
 
-            ResultSet rs = pstmt.executeQuery();
-            if (rs.next()) {
-                return new WarpPosition(
-                        UUID.fromString(rs.getString("player_uuid")),
-                        rs.getString("warp_name"),
-                        rs.getString("world_id"),
-                        rs.getBoolean("is_private"),
-                        rs.getInt("x"),
-                        rs.getInt("y"),
-                        rs.getInt("z"),
-                        rs.getLong("created_at")
-                );
-            } else {
-                LOGGER.debug("Warp '{}' not found", warpName);
-                return null;
+                ResultSet rs = pstmt.executeQuery();
+                if (rs.next()) {
+                    return new WarpPosition(
+                            UUID.fromString(rs.getString("player_uuid")),
+                            rs.getString("warp_name"),
+                            rs.getString("world_id"),
+                            rs.getBoolean("is_private"),
+                            rs.getInt("x"),
+                            rs.getInt("y"),
+                            rs.getInt("z"),
+                            rs.getLong("created_at")
+                    );
+                } else {
+                    LOGGER.debug("Warp '{}' not found", warpName);
+                    return null;
+                }
             }
         } catch (SQLException e) {
             LOGGER.error("Failed to get warp", e);
@@ -328,13 +374,16 @@ public class DatabaseManager {
 
     public boolean removeWarp(UUID playerUuid, String warpName) {
         String sql = "DELETE FROM warps WHERE player_uuid = ? AND warp_name = ?";
-        try (PreparedStatement pstmt = connection.prepareStatement(sql)) {
-            pstmt.setString(1, playerUuid.toString());
-            pstmt.setString(2, warpName);
+        try {
+            ensureConnection();
+            try (PreparedStatement pstmt = connection.prepareStatement(sql)) {
+                pstmt.setString(1, playerUuid.toString());
+                pstmt.setString(2, warpName);
 
-            int affected = pstmt.executeUpdate();
-            LOGGER.debug("Removed warp '{}' for player {} (affected rows: {})", warpName, playerUuid, affected);
-            return affected > 0;
+                int affected = pstmt.executeUpdate();
+                LOGGER.debug("Removed warp '{}' for player {} (affected rows: {})", warpName, playerUuid, affected);
+                return affected > 0;
+            }
         } catch (SQLException e) {
             LOGGER.error("Failed to remove warp", e);
             return false;
@@ -348,12 +397,15 @@ public class DatabaseManager {
         List<String> warpNames = new ArrayList<>();
         String sql = "SELECT warp_name FROM warps WHERE is_private = 0 OR player_uuid = ? ORDER BY warp_name";
 
-        try (PreparedStatement pstmt = connection.prepareStatement(sql)) {
-            pstmt.setString(1, playerUUID.toString());
+        try {
+            ensureConnection();
+            try (PreparedStatement pstmt = connection.prepareStatement(sql)) {
+                pstmt.setString(1, playerUUID.toString());
 
-            ResultSet rs = pstmt.executeQuery();
-            while (rs.next()) {
-                warpNames.add(rs.getString("warp_name"));
+                ResultSet rs = pstmt.executeQuery();
+                while (rs.next()) {
+                    warpNames.add(rs.getString("warp_name"));
+                }
             }
         } catch (SQLException e) {
             LOGGER.error("Failed to get accessible warp names", e);
@@ -369,12 +421,14 @@ public class DatabaseManager {
         List<String> warpNames = new ArrayList<>();
         String sql = "SELECT warp_name FROM warps WHERE player_uuid = ? ORDER BY warp_name";
 
-        try (PreparedStatement pstmt = connection.prepareStatement(sql)) {
-            pstmt.setString(1, playerUUID.toString());
+        try {
+            try (PreparedStatement pstmt = connection.prepareStatement(sql)) {
+                pstmt.setString(1, playerUUID.toString());
 
-            ResultSet rs = pstmt.executeQuery();
-            while (rs.next()) {
-                warpNames.add(rs.getString("warp_name"));
+                ResultSet rs = pstmt.executeQuery();
+                while (rs.next()) {
+                    warpNames.add(rs.getString("warp_name"));
+                }
             }
         } catch (SQLException e) {
             LOGGER.error("Failed to get player warp names", e);
