@@ -2,6 +2,7 @@ package uk.co.finleyofthewoods.warpspeed.utils;
 
 import net.minecraft.block.BlockState;
 import net.minecraft.block.Blocks;
+import net.minecraft.fluid.Fluids;
 import net.minecraft.particle.ParticleTypes;
 import net.minecraft.registry.RegistryKey;
 import net.minecraft.registry.RegistryKeys;
@@ -33,7 +34,7 @@ public class TeleportUtils {
             BlockPos safeLoc = findSafeLocation(world, spawnPos);
             return teleportPlayer(player, world, safeLoc);
         } catch (Exception e) {
-            handleException(e);
+            handleException(e, "Failed to teleport to spawn", player);
             return false;
         }
     }
@@ -42,6 +43,7 @@ public class TeleportUtils {
         try {
             HomePosition home = dbManager.getHome(player.getUuid(), homeName);
             if (home == null) {
+                player.sendMessage(Text.literal("§cFailed to find home: " + homeName), false);
                 LOGGER.warn("Failed to find home for player {}: {}", player.getName().toString(), homeName);
                 return false;
             }
@@ -52,14 +54,14 @@ public class TeleportUtils {
             ServerWorld targetWorld = getTargetWorld(player, home.getWorldId());
             if (targetWorld == null) {
                 LOGGER.warn("Failed to find world {} for warp {}", home.getWorldId(), homeName);
-                player.sendMessage(Text.literal("Failed to teleport: warp world not found"), false);
+                player.sendMessage(Text.literal("§cFailed to teleport: warp world not found"), false);
                 return false;
             }
 
             BlockPos safeLoc = findSafeLocation(targetWorld, homePos);
             return teleportPlayer(player, targetWorld, safeLoc);
         } catch (Exception e) {
-            handleException(e);
+            handleException(e, "Failed to teleport to home " + homeName, player);
             return false;
         }
     }
@@ -68,24 +70,24 @@ public class TeleportUtils {
         try {
             if (!PlayerLocationTracker.hasPreviousLocation(player)) {
                 LOGGER.debug("Failed to teleport {} to last location: no previous location found", player.getName().toString());
+                player.sendMessage(Text.literal("§cFailed to teleport: no previous location found"), false);
                 return false;
             }
             PlayerLocationTracker.PlayerLocation location = PlayerLocationTracker.getPreviousLocation(player);
-            World world = player.getEntityWorld();
 
             BlockPos pos = location.getBlockPos();
             LOGGER.debug("Attempt to teleport {} back to ({}, {}, {})", player.getName().toString(), pos.getX(), pos.getY(), pos.getZ());
             ServerWorld targetWorld = getTargetWorld(player, location.getWorldId());
             if (targetWorld == null) {
                 LOGGER.warn("Failed to find world {} for previous location warp", location.getWorldId());
-                player.sendMessage(Text.literal("Failed to teleport: warp world not found"), false);
+                player.sendMessage(Text.literal("§cFailed to teleport: warp world not found"), false);
                 return false;
             }
 
             BlockPos safeLoc = findSafeLocation(targetWorld, pos);
             return teleportPlayer(player, targetWorld, safeLoc);
         } catch (Exception e) {
-            handleException(e);
+            handleException(e, "Failed to teleport to last location", player);
             return false;
         }
     }
@@ -95,11 +97,12 @@ public class TeleportUtils {
             WarpPosition warp = dbManager.getWarp(warpName);
             if (warp == null) {
                 LOGGER.warn("Failed to find warp for player {}: {}", player.getName().toString(), warpName);
+                player.sendMessage(Text.literal("§cFailed to find warp: " + warpName + " does not exist."), false);
                 return false;
             }
             if (warp.isPrivate() && !warp.getPlayerUUID().equals(player.getUuid())) {
                 LOGGER.warn("Failed to teleport {} to warp {}: warp is private and not owned by player", player.getName().toString(), warpName);
-                player.sendMessage(Text.literal("Teleportation failed. Warp is private and not owned by you."), false);
+                player.sendMessage(Text.literal("§cTeleportation failed. Warp is private and not owned by you."), false);
                 return false;
             }
             BlockPos warpPos = warp.getBlockPos();
@@ -109,14 +112,14 @@ public class TeleportUtils {
             ServerWorld targetWorld = getTargetWorld(player, warp.getWorldId());
             if (targetWorld == null) {
                 LOGGER.warn("Failed to find world {} for warp {}", warp.getWorldId(), warpName);
-                player.sendMessage(Text.literal("Failed to teleport: warp world not found"), false);
+                player.sendMessage(Text.literal("§cFailed to teleport: warp world not found"), false);
                 return false;
             }
 
             BlockPos safeLoc = findSafeLocation(targetWorld, warpPos);
             return teleportPlayer(player, targetWorld, safeLoc);
         } catch (Exception e) {
-            handleException(e);
+            handleException(e, "Failed to teleport to warp " + warpName, player);
             return false;
         }
     }
@@ -131,7 +134,7 @@ public class TeleportUtils {
                 for (int dz = -searchRadius; dz <= searchRadius; dz++) {
                     BlockPos pos = spawnPos.add(dx, dy, dz);
                     if (isSafeLocation(world, pos)) {
-                        LOGGER.debug("Found safe location at offset ({}, {}, {}) from spawn", dx, dy, dz);
+                        LOGGER.debug("Found safe location at offset ({}, {}, {}) from location", dx, dy, dz);
                         return pos;
                     }
                 }
@@ -165,18 +168,24 @@ public class TeleportUtils {
         if (state.isAir()) {
             // Air is safe to stand in
             return true;
-        } else if (state.isOf(Blocks.WATER)) {
+        } else if (state.isOf(Blocks.WATER) || state.getFluidState().isOf(Fluids.WATER)) {
             // Water is safe to stand
             return true;
         } else if (!state.isSolidBlock(world, pos)) {
             // Non-solid blocks are safe to stand in
             return true;
-        } else if (state.isOf(Blocks.LAVA)) {
+        } else if (state.getFluidState().isOf(Fluids.LAVA) || state.getFluidState().isOf(Fluids.FLOWING_LAVA)) {
             // Lava is not safe to stand in
+            return false;
+        } else if (state.isOf(Blocks.SWEET_BERRY_BUSH) || state.isOf(Blocks.CACTUS)) {
+            // Cactus and sweet berry bushes are not safe to stand in
             return false;
         } else if (state.isOf(Blocks.FIRE) || state.isOf(Blocks.SOUL_FIRE)) {
             // Fire and soul fire are not safe to stand in
             return false;
+        } else if (!state.isSolidBlock(world, pos)) {
+            // Non-solid blocks (carpets, slabs, flowers, tall grass, etc.) are safe to stand in/on
+            return true;
         }
         // Non-solid blocks are not safe to stand in
         return false;
@@ -233,11 +242,13 @@ public class TeleportUtils {
         return teleported;
     }
 
-    private static void handleException(Exception e) {
+    private static void handleException(Exception e, String message, ServerPlayerEntity player) {
         if (e instanceof NoSafeLocationFoundException nslfe) {
             LOGGER.error("Failed to find safe location: {}", nslfe.getMessage());
+            player.sendMessage(Text.literal(nslfe.getMessage() + ": " + message), false);
         } else {
             LOGGER.error("Unexpected error during teleport: {}", e.getMessage());
+            player.sendMessage(Text.literal("Unexpected error during teleport: " + message), false);
         }
     }
 
