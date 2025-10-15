@@ -7,7 +7,6 @@ import net.minecraft.particle.ParticleTypes;
 import net.minecraft.registry.RegistryKey;
 import net.minecraft.registry.RegistryKeys;
 import net.minecraft.registry.tag.BlockTags;
-import net.minecraft.registry.tag.ItemTags;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.network.ServerPlayerEntity;
 import net.minecraft.server.world.ServerWorld;
@@ -34,7 +33,7 @@ public class TeleportUtils {
                     spawnPos.getX(),
                     spawnPos.getY(),
                     spawnPos.getZ());
-            BlockPos safeLoc = findSafeLocation(world, spawnPos, player);
+            BlockPos safeLoc = findSafeLocation(world, spawnPos);
             return teleportPlayer(player, world, safeLoc);
         } catch (Exception e) {
             handleException(e, "Failed to teleport to spawn", player);
@@ -42,7 +41,7 @@ public class TeleportUtils {
         }
     }
 
-    public static boolean teleportToHome(ServerPlayerEntity player, World world, String homeName, DatabaseManager dbManager) {
+    public static boolean teleportToHome(ServerPlayerEntity player, String homeName, DatabaseManager dbManager) {
         try {
             HomePosition home = dbManager.getHome(player.getUuid(), homeName);
             if (home == null) {
@@ -61,7 +60,7 @@ public class TeleportUtils {
                 return false;
             }
 
-            BlockPos safeLoc = findSafeLocation(targetWorld, homePos, player);
+            BlockPos safeLoc = findSafeLocation(targetWorld, homePos);
             return teleportPlayer(player, targetWorld, safeLoc);
         } catch (Exception e) {
             handleException(e, "Failed to teleport to home " + homeName, player);
@@ -87,7 +86,7 @@ public class TeleportUtils {
                 return false;
             }
 
-            BlockPos safeLoc = findSafeLocation(targetWorld, pos, player);
+            BlockPos safeLoc = findSafeLocation(targetWorld, pos);
             return teleportPlayer(player, targetWorld, safeLoc);
         } catch (Exception e) {
             handleException(e, "Failed to teleport to last location", player);
@@ -95,7 +94,7 @@ public class TeleportUtils {
         }
     }
 
-    public static boolean teleportToWarp(ServerPlayerEntity player, World world, String warpName, DatabaseManager dbManager) {
+    public static boolean teleportToWarp(ServerPlayerEntity player, String warpName, DatabaseManager dbManager) {
         try {
             WarpPosition warp = dbManager.getWarp(warpName);
             if (warp == null) {
@@ -119,7 +118,7 @@ public class TeleportUtils {
                 return false;
             }
 
-            BlockPos safeLoc = findSafeLocation(targetWorld, warpPos, player);
+            BlockPos safeLoc = findSafeLocation(targetWorld, warpPos);
             return teleportPlayer(player, targetWorld, safeLoc);
         } catch (Exception e) {
             handleException(e, "Failed to teleport to warp " + warpName, player);
@@ -127,8 +126,8 @@ public class TeleportUtils {
         }
     }
 
-    public static BlockPos findSafeLocation(World world, BlockPos spawnPos, ServerPlayerEntity player) throws NoSafeLocationFoundException {
-        if (isSafeLocation(world, spawnPos, player)) {
+    public static BlockPos findSafeLocation(World world, BlockPos spawnPos) throws NoSafeLocationFoundException {
+        if (isSafeLocation(world, spawnPos)) {
             return spawnPos;
         }
         int searchRadius = 10;
@@ -146,7 +145,7 @@ public class TeleportUtils {
                         }
 
                         BlockPos pos = spawnPos.add(dx, dy, dz);
-                        if (isSafeLocation(world, pos, player)) {
+                        if (isSafeLocation(world, pos)) {
                             LOGGER.debug("Found safe location at distance {} with offset ({}, {}, {}) from location",
                                     radius, dx, dy, dz);
                             return pos;
@@ -159,7 +158,7 @@ public class TeleportUtils {
         throw new NoSafeLocationFoundException("Failed to find safe location");
     }
 
-    private static boolean isSafeLocation(World world, BlockPos pos, ServerPlayerEntity player) {
+    private static boolean isSafeLocation(World world, BlockPos pos) {
         BlockPos belowPos = pos.down();
         BlockPos headPos = pos.up();
 
@@ -170,25 +169,22 @@ public class TeleportUtils {
         boolean hasSafeBase = belowState.isSolidBlock(world, pos)
                 || belowState.isOf(Blocks.WATER)
                 || !belowState.getFluidState().isEmpty()
-                || isSafeToStandIn(belowState, world, belowPos, player);
+                || isSafeToStandIn(belowState);
 
         if (!hasSafeBase) {
-            player.sendMessage(Text.literal("No safe base found"));
             return false;
         }
 
-        boolean isHeadSafe = isSafeToStandIn(headState, world, headPos, player);
-        boolean isFeetSafe = isSafeToStandIn(feetState, world, pos, player);
+        boolean isHeadSafe = isSafeToStandIn(headState);
+        boolean isFeetSafe = isSafeToStandIn(feetState);
         if (!isHeadSafe || !isFeetSafe) {
-            player.sendMessage(Text.literal("Head or feet are unsafe"));
             return false;
         }
-        player.sendMessage(Text.literal("Teleporting to safe location"));
         return true;
     }
 
 
-    private static boolean isSafeToStandIn(BlockState state, World world, BlockPos pos, ServerPlayerEntity player) {
+    private static boolean isSafeToStandIn(BlockState state) {
         if (state.isAir()) {
             return true;
         }
@@ -205,7 +201,6 @@ public class TeleportUtils {
 
         // Dangerous fluids
         if (state.getFluidState().isOf(Fluids.LAVA) || state.getFluidState().isOf(Fluids.FLOWING_LAVA)) {
-            player.sendMessage(Text.literal("message.warpspeed.teleport.dangerous_fluid"), false);
             return false;
         }
 

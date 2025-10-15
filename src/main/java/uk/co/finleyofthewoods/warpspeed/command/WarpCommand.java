@@ -103,7 +103,7 @@ public class WarpCommand {
             String warpName = StringArgumentType.getString(context, "warpName");
             World world = player.getEntityWorld();
 
-            boolean success = TeleportUtils.teleportToWarp(player, world, warpName, dbManager);
+            boolean success = TeleportUtils.teleportToWarp(player, warpName, dbManager);
             if (success) {
                 player.sendMessage(Text.literal("Teleported to warp: " + warpName), false);
                 return 1;

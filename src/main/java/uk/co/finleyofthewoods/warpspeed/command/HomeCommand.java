@@ -102,7 +102,7 @@ public class HomeCommand {
                 return 0;
             }
 
-            boolean success = TeleportUtils.teleportToHome(player, world, homeName, dbManager);
+            boolean success = TeleportUtils.teleportToHome(player, homeName, dbManager);
             if (success) {
                 player.sendMessage(Text.literal("Teleported to home: " + homeName), false);
                 return 1;
