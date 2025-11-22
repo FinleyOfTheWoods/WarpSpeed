@@ -13,12 +13,13 @@ import net.minecraft.sound.SoundEvents;
 import net.minecraft.text.Text;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import uk.co.finleyofthewoods.warpspeed.infrastructure.exceptions.*;
 import uk.co.finleyofthewoods.warpspeed.utils.DatabaseManager;
-import uk.co.finleyofthewoods.warpspeed.utils.tpa.*;
-import uk.co.finleyofthewoods.warpspeed.utils.tpa.request.impl.MultipleTargetsToPrivilegedSenderRequest;
-import uk.co.finleyofthewoods.warpspeed.utils.tpa.request.impl.SenderToSingleTargetRequest;
-import uk.co.finleyofthewoods.warpspeed.utils.tpa.request.impl.SingleTargetToPrivilegedSenderRequest;
-import uk.co.finleyofthewoods.warpspeed.utils.tpa.request.impl.SingleTargetToSingleSenderRequest;
+import uk.co.finleyofthewoods.warpspeed.infrastructure.tpa.request.impl.MultipleTargetsToPrivilegedSenderRequest;
+import uk.co.finleyofthewoods.warpspeed.infrastructure.tpa.request.impl.SenderToSingleTargetRequest;
+import uk.co.finleyofthewoods.warpspeed.infrastructure.tpa.request.impl.SingleTargetToPrivilegedSenderRequest;
+import uk.co.finleyofthewoods.warpspeed.infrastructure.tpa.request.impl.SingleTargetToSingleSenderRequest;
+import uk.co.finleyofthewoods.warpspeed.utils.TpxRequestManager;
 
 import java.util.List;
 import java.util.NoSuchElementException;

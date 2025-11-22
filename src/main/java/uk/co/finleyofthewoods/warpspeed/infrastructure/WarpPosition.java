@@ -1,4 +1,4 @@
-package uk.co.finleyofthewoods.warpspeed.utils;
+package uk.co.finleyofthewoods.warpspeed.infrastructure;
 
 import net.minecraft.util.math.BlockPos;
 

@@ -16,7 +16,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import uk.co.finleyofthewoods.warpspeed.utils.DatabaseManager;
 import uk.co.finleyofthewoods.warpspeed.utils.TeleportUtils;
-import uk.co.finleyofthewoods.warpspeed.utils.WarpPosition;
+import uk.co.finleyofthewoods.warpspeed.infrastructure.WarpPosition;
 
 import java.util.Arrays;
 import java.util.List;

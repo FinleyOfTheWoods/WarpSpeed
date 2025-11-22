@@ -15,7 +15,7 @@ import net.minecraft.world.World;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import uk.co.finleyofthewoods.warpspeed.utils.DatabaseManager;
-import uk.co.finleyofthewoods.warpspeed.utils.HomePosition;
+import uk.co.finleyofthewoods.warpspeed.infrastructure.HomePosition;
 import uk.co.finleyofthewoods.warpspeed.utils.TeleportUtils;
 
 import java.util.List;

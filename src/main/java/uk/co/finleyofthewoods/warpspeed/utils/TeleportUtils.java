@@ -20,7 +20,9 @@ import net.minecraft.world.TeleportTarget;
 import net.minecraft.world.World;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import uk.co.finleyofthewoods.warpspeed.exceptions.NoSafeLocationFoundException;
+import uk.co.finleyofthewoods.warpspeed.infrastructure.HomePosition;
+import uk.co.finleyofthewoods.warpspeed.infrastructure.WarpPosition;
+import uk.co.finleyofthewoods.warpspeed.infrastructure.exceptions.NoSafeLocationFoundException;
 
 
 public class TeleportUtils {

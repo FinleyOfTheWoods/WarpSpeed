@@ -1,9 +1,10 @@
-package uk.co.finleyofthewoods.warpspeed.utils.tpa.request.impl;
+package uk.co.finleyofthewoods.warpspeed.infrastructure.tpa.request.impl;
 
 import net.minecraft.server.network.ServerPlayerEntity;
+import uk.co.finleyofthewoods.warpspeed.infrastructure.exceptions.TpxExpiredException;
 import uk.co.finleyofthewoods.warpspeed.utils.TeleportUtils;
-import uk.co.finleyofthewoods.warpspeed.utils.tpa.*;
-import uk.co.finleyofthewoods.warpspeed.utils.tpa.request.AbstractTpxRequest;
+import uk.co.finleyofthewoods.warpspeed.infrastructure.tpa.*;
+import uk.co.finleyofthewoods.warpspeed.infrastructure.tpa.request.AbstractTpxRequest;
 
 import java.util.List;
 

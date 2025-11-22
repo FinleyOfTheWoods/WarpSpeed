@@ -8,7 +8,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import uk.co.finleyofthewoods.warpspeed.command.*;
 import uk.co.finleyofthewoods.warpspeed.utils.DatabaseManager;
-import uk.co.finleyofthewoods.warpspeed.utils.tpa.TpxRequestManager;
+import uk.co.finleyofthewoods.warpspeed.utils.TpxRequestManager;
 
 public class Warpspeed implements ModInitializer {
     public static final Logger LOGGER = LoggerFactory.getLogger(Warpspeed.class);

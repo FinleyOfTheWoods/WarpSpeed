@@ -1,4 +1,4 @@
-package uk.co.finleyofthewoods.warpspeed.utils.tpa;
+package uk.co.finleyofthewoods.warpspeed.utils;
 
 import java.util.List;
 import java.util.Optional;
@@ -8,10 +8,10 @@ import java.util.concurrent.ConcurrentHashMap;
 import net.minecraft.server.network.ServerPlayerEntity;
 import net.minecraft.text.Text;
 import org.jetbrains.annotations.NotNull;
-import uk.co.finleyofthewoods.warpspeed.utils.BlocklistOfPlayer;
-import uk.co.finleyofthewoods.warpspeed.utils.DatabaseManager;
-import uk.co.finleyofthewoods.warpspeed.utils.tpa.request.AbstractTpxRequest;
-import uk.co.finleyofthewoods.warpspeed.utils.tpa.request.impl.*;
+import uk.co.finleyofthewoods.warpspeed.infrastructure.BlocklistOfPlayer;
+import uk.co.finleyofthewoods.warpspeed.infrastructure.exceptions.*;
+import uk.co.finleyofthewoods.warpspeed.infrastructure.tpa.request.AbstractTpxRequest;
+import uk.co.finleyofthewoods.warpspeed.infrastructure.tpa.request.impl.*;
 
 
 public class TpxRequestManager {

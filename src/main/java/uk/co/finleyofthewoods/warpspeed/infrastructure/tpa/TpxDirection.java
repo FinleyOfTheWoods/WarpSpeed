@@ -1,4 +1,4 @@
-package uk.co.finleyofthewoods.warpspeed.utils.tpa;
+package uk.co.finleyofthewoods.warpspeed.infrastructure.tpa;
 
 public enum TpxDirection {
     RECEIVER_TO_SENDER,

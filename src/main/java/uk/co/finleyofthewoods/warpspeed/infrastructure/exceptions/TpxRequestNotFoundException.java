@@ -1,4 +1,4 @@
-package uk.co.finleyofthewoods.warpspeed.utils.tpa;
+package uk.co.finleyofthewoods.warpspeed.infrastructure.exceptions;
 
 public class TpxRequestNotFoundException extends RuntimeException {
     public TpxRequestNotFoundException(String message) {

@@ -1,7 +1,7 @@
-package uk.co.finleyofthewoods.warpspeed.utils.tpa.request;
+package uk.co.finleyofthewoods.warpspeed.infrastructure.tpa.request;
 
 import net.minecraft.server.network.ServerPlayerEntity;
-import uk.co.finleyofthewoods.warpspeed.utils.tpa.TpxDirection;
+import uk.co.finleyofthewoods.warpspeed.infrastructure.tpa.TpxDirection;
 
 import java.time.Instant;
 import java.util.List;
