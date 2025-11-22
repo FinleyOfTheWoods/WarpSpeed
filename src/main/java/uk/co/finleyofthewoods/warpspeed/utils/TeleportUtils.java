@@ -147,6 +147,29 @@ public class TeleportUtils {
         }
     }
 
+    public static boolean teleportToRandomLocation(ServerPlayerEntity player, World world) {
+        int cooldown = RTPRequestManager.hasRtpRequestCooldownExpired(player);
+        if (cooldown > 0) {
+            LOGGER.debug("Player {} has a pending RTP request, not teleporting", player.getName().toString());
+            player.sendMessage(Text.literal("§c§oRTP recently used. Please wait " + cooldown + " seconds."), true);
+            return false;
+        }
+        BlockPos pos = RTPRequestManager.requestRTP(player, world);
+        try {
+            BlockPos safePos = findSafeLocation(world, pos);
+            if (teleportPlayer(player, world, safePos)) {
+                RTPRequestManager.setRtpCooldown(player);
+                return true;
+            } else {
+                player.sendMessage(Text.literal("Failed to find a suitable RTP location."), false);
+                return false;
+            }
+        } catch (Exception e) {
+            handleException(e, "§c§oFailed to find a safe RTP location", player);
+            return false;
+        }
+    }
+
     public static BlockPos findSafeLocation(World world, BlockPos spawnPos) throws NoSafeLocationFoundException {
         if (isSafeLocation(world, spawnPos)) {
             return spawnPos;
@@ -186,6 +209,21 @@ public class TeleportUtils {
         BlockState headState = world.getBlockState(headPos);
         BlockState feetState = world.getBlockState(pos);
         BlockState belowState = world.getBlockState(belowPos);
+
+        if (pos.getY() < world.getBottomY()) {
+            return false;
+        }
+
+        boolean canSurviveFall = false;
+        for (int i = 0; i < 4; i++) {
+            BlockState state = world.getBlockState(pos.down(i));
+            if (!state.isAir()) {
+                canSurviveFall = true;
+            }
+        }
+        if (!canSurviveFall) {
+            return false;
+        }
 
         boolean hasSafeBase = belowState.isSolidBlock(world, pos)
                 || belowState.isOf(Blocks.WATER)

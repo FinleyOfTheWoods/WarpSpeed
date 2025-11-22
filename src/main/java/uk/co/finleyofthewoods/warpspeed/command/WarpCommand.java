@@ -14,6 +14,7 @@ import net.minecraft.util.math.BlockPos;
 import net.minecraft.world.World;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import uk.co.finleyofthewoods.warpspeed.config.ConfigManager;
 import uk.co.finleyofthewoods.warpspeed.utils.DatabaseManager;
 import uk.co.finleyofthewoods.warpspeed.utils.TeleportUtils;
 import uk.co.finleyofthewoods.warpspeed.infrastructure.WarpPosition;
@@ -27,7 +28,7 @@ import static net.minecraft.server.command.CommandManager.literal;
 
 public class WarpCommand {
     private static final Logger LOGGER = LoggerFactory.getLogger(WarpCommand.class);
-    private static final int MAX_WARP_PER_PLAYER = 254;
+    private static final int MAX_WARP_PER_PLAYER = ConfigManager.get().getPlayerWarpLimit();
 
     private static SuggestionProvider<ServerCommandSource> accessibleWarpSuggestions(DatabaseManager dbManager) {
         return (context, builder) -> {
@@ -101,7 +102,6 @@ public class WarpCommand {
             ServerCommandSource source = context.getSource();
             ServerPlayerEntity player = source.getPlayerOrThrow();
             String warpName = StringArgumentType.getString(context, "warpName");
-            World world = player.getEntityWorld();
 
             boolean success = TeleportUtils.teleportToWarp(player, warpName, dbManager);
             if (success) {

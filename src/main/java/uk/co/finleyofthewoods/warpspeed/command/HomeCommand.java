@@ -14,6 +14,7 @@ import net.minecraft.util.math.BlockPos;
 import net.minecraft.world.World;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import uk.co.finleyofthewoods.warpspeed.config.ConfigManager;
 import uk.co.finleyofthewoods.warpspeed.utils.DatabaseManager;
 import uk.co.finleyofthewoods.warpspeed.infrastructure.HomePosition;
 import uk.co.finleyofthewoods.warpspeed.utils.TeleportUtils;
@@ -26,7 +27,7 @@ import static net.minecraft.server.command.CommandManager.literal;
 
 public class HomeCommand {
     private static final Logger LOGGER = LoggerFactory.getLogger(HomeCommand.class);
-    private static final int MAX_HOME_PER_PLAYER = 10;
+    private static final int MAX_HOME_PER_PLAYER = ConfigManager.get().getPlayerHomeLimit();
 
     private static SuggestionProvider<ServerCommandSource> homeSuggestions(DatabaseManager dbManager) {
         return (context, builder) -> {

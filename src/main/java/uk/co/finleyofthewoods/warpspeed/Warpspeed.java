@@ -40,8 +40,10 @@ public class Warpspeed implements ModInitializer {
             BackCommand.register(dispatcher);
             /// Handle /warp command and teleport the player to the warp location.
             WarpCommand.register(dispatcher, dbManager);
-            /// Handle all teleport related commands.
+            /// Handle all teleport-related commands.
             TpxCommand.register(dispatcher, dbManager);
+            /// Handle /rtp command and teleport the player to a random location
+            RtpCommand.register(dispatcher);
         }));
     }
     public static DatabaseManager getDatabaseManager() {
