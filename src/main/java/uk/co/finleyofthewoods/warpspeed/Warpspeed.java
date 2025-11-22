@@ -3,13 +3,12 @@ package uk.co.finleyofthewoods.warpspeed;
 import net.fabricmc.api.ModInitializer;
 import net.fabricmc.fabric.api.command.v2.CommandRegistrationCallback;
 import net.fabricmc.fabric.api.event.lifecycle.v1.ServerLifecycleEvents;
+import net.fabricmc.fabric.api.event.lifecycle.v1.ServerTickEvents;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import uk.co.finleyofthewoods.warpspeed.command.BackCommand;
-import uk.co.finleyofthewoods.warpspeed.command.HomeCommand;
-import uk.co.finleyofthewoods.warpspeed.command.SpawnCommand;
-import uk.co.finleyofthewoods.warpspeed.command.WarpCommand;
+import uk.co.finleyofthewoods.warpspeed.command.*;
 import uk.co.finleyofthewoods.warpspeed.utils.DatabaseManager;
+import uk.co.finleyofthewoods.warpspeed.utils.TpxRequestManager;
 
 public class Warpspeed implements ModInitializer {
     public static final Logger LOGGER = LoggerFactory.getLogger(Warpspeed.class);
@@ -29,6 +28,8 @@ public class Warpspeed implements ModInitializer {
             dbManager.close();
         });
 
+        ServerTickEvents.END_SERVER_TICK.register(server -> TpxRequestManager.tick());
+
         /// Register commands
         CommandRegistrationCallback.EVENT.register(((dispatcher, registryAccess, environment) -> {
             /// Handle /spawn command and teleport the player to the world spawn location.
@@ -39,6 +40,8 @@ public class Warpspeed implements ModInitializer {
             BackCommand.register(dispatcher);
             /// Handle /warp command and teleport the player to the warp location.
             WarpCommand.register(dispatcher, dbManager);
+            /// Handle all teleport related commands.
+            TpxCommand.register(dispatcher, dbManager);
         }));
     }
     public static DatabaseManager getDatabaseManager() {

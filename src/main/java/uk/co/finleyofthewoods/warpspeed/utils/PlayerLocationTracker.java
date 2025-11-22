@@ -16,39 +16,12 @@ public class PlayerLocationTracker {
     private static final Map<UUID, PlayerLocation> previousLocations = new HashMap<>();
     private static final Map<UUID, PlayerLocation> deathLocations = new HashMap<>();
 
-    public static class PlayerLocation {
-        private final int x;
-        private final int y;
-        private final int z;
-        private final String worldId;
-
-        public PlayerLocation(int x, int y, int z, String worldId) {
-            this.x = x;
-            this.y = y;
-            this.z = z;
-            this.worldId = worldId;
-        }
-
-        public int getX() {
-            return x;
-        }
-
-        public int getY() {
-            return y;
-        }
-
-        public int getZ() {
-            return z;
-        }
+    public record PlayerLocation(int x, int y, int z, String worldId) {
 
         public BlockPos getBlockPos() {
-            return new BlockPos(x, y, z);
+                return new BlockPos(x, y, z);
+            }
         }
-
-        public String getWorldId() {
-            return worldId;
-        }
-    }
 
     public static void storeCurrentLocation(ServerPlayerEntity player) {
         UUID uuid = player.getUuid();

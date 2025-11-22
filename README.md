@@ -127,7 +127,7 @@ WarpSpeed fully supports cross-dimension teleportation:
 ## 🔮 Future Considerations
 
 Potential features for future releases:
-- Configuration file for limits, cooldowns, and particle effects
+- Configuration file for limits, cooldowns, and particle effects, and tpa settings
 - Teleport cooldowns to prevent spam
 - Warp descriptions and categories
 - Warp popularity tracking

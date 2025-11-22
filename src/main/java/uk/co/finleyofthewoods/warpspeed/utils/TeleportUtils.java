@@ -20,7 +20,9 @@ import net.minecraft.world.TeleportTarget;
 import net.minecraft.world.World;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import uk.co.finleyofthewoods.warpspeed.exceptions.NoSafeLocationFoundException;
+import uk.co.finleyofthewoods.warpspeed.infrastructure.HomePosition;
+import uk.co.finleyofthewoods.warpspeed.infrastructure.WarpPosition;
+import uk.co.finleyofthewoods.warpspeed.infrastructure.exceptions.NoSafeLocationFoundException;
 
 
 public class TeleportUtils {
@@ -53,9 +55,9 @@ public class TeleportUtils {
             BlockPos homePos = home.getBlockPos();
             LOGGER.debug("Attempting to teleport {} to ({}, {}, {})",
                     player.getName().toString(), homePos.getX(), homePos.getY(), homePos.getZ());
-            ServerWorld targetWorld = getTargetWorld(player, home.getWorldId());
+            ServerWorld targetWorld = getTargetWorld(player, home.worldId());
             if (targetWorld == null) {
-                LOGGER.warn("Failed to find world {} for warp {}", home.getWorldId(), homeName);
+                LOGGER.warn("Failed to find world {} for warp {}", home.worldId(), homeName);
                 player.sendMessage(Text.literal("§cFailed to teleport: warp world not found"), false);
                 return false;
             }
@@ -79,9 +81,9 @@ public class TeleportUtils {
 
             BlockPos pos = location.getBlockPos();
             LOGGER.debug("Attempt to teleport {} back to ({}, {}, {})", player.getName().toString(), pos.getX(), pos.getY(), pos.getZ());
-            ServerWorld targetWorld = getTargetWorld(player, location.getWorldId());
+            ServerWorld targetWorld = getTargetWorld(player, location.worldId());
             if (targetWorld == null) {
-                LOGGER.warn("Failed to find world {} for previous location warp", location.getWorldId());
+                LOGGER.warn("Failed to find world {} for previous location warp", location.worldId());
                 player.sendMessage(Text.literal("§cFailed to teleport: warp world not found"), false);
                 return false;
             }
@@ -102,7 +104,7 @@ public class TeleportUtils {
                 player.sendMessage(Text.literal("§cFailed to find warp: " + warpName + " does not exist."), false);
                 return false;
             }
-            if (warp.isPrivate() && !warp.getPlayerUUID().equals(player.getUuid())) {
+            if (warp.isPrivate() && !warp.playerUUID().equals(player.getUuid())) {
                 LOGGER.warn("Failed to teleport {} to warp {}: warp is private and not owned by player", player.getName().toString(), warpName);
                 player.sendMessage(Text.literal("§cTeleportation failed. Warp is private and not owned by you."), false);
                 return false;
@@ -111,9 +113,9 @@ public class TeleportUtils {
             LOGGER.debug("Attempting to teleport {} to ({}, {}, {})",
                     player.getName().toString(), warpPos.getX(), warpPos.getY(), warpPos.getZ());
 
-            ServerWorld targetWorld = getTargetWorld(player, warp.getWorldId());
+            ServerWorld targetWorld = getTargetWorld(player, warp.worldId());
             if (targetWorld == null) {
-                LOGGER.warn("Failed to find world {} for warp {}", warp.getWorldId(), warpName);
+                LOGGER.warn("Failed to find world {} for warp {}", warp.worldId(), warpName);
                 player.sendMessage(Text.literal("§cFailed to teleport: warp world not found"), false);
                 return false;
             }
@@ -122,6 +124,25 @@ public class TeleportUtils {
             return teleportPlayer(player, targetWorld, safeLoc);
         } catch (Exception e) {
             handleException(e, "Failed to teleport to warp " + warpName, player);
+            return false;
+        }
+    }
+
+    public static boolean teleportPlayerToPlayer(ServerPlayerEntity playerToTeleport, ServerPlayerEntity targetPlayer) {
+        try {
+            World targetWorld = targetPlayer.getEntityWorld();
+            BlockPos targetPos = targetPlayer.getBlockPos();
+            LOGGER.debug("§6§oAttempting to teleport to player {} at ({}, {}, {})",
+                    playerToTeleport.getName().toString(),
+                    targetPos.getX(),
+                    targetPos.getY(),
+                    targetPos.getZ());
+            playerToTeleport.sendMessage(Text.literal("§6§oFinding a safe location near " + targetPlayer.getName().getString()),false);
+            BlockPos safeLoc = findSafeLocation(targetWorld, targetPos);
+            playerToTeleport.sendMessage(Text.literal("§6§oDone. Teleporting now."),false);
+            return teleportPlayer(playerToTeleport, targetWorld, safeLoc);
+        } catch (Exception e) {
+            handleException(e, "§c§oFailed to teleport player", playerToTeleport);
             return false;
         }
     }
