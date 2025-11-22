@@ -4,61 +4,9 @@ import net.minecraft.util.math.BlockPos;
 
 import java.util.UUID;
 
-public class HomePosition {
-    private final UUID playerUUID;
-    private final String homeName;
-    private final String worldId;
-    private final int x;
-    private final int y;
-    private final int z;
-    private final long createdAt;
-
+public record HomePosition(UUID playerUUID, String homeName, String worldId, int x, int y, int z, long createdAt) {
     public HomePosition(UUID playerUUID, String homeName, String worldId, int x, int y, int z) {
-        this.playerUUID = playerUUID;
-        this.homeName = homeName;
-        this.worldId = worldId;
-        this.x = x;
-        this.y = y;
-        this.z = z;
-        this.createdAt = System.currentTimeMillis();
-    }
-
-    public HomePosition(UUID playerUUID, String homeName, String worldId, int x, int y, int z, long createdAt) {
-        this.playerUUID = playerUUID;
-        this.homeName = homeName;
-        this.worldId = worldId;
-        this.x = x;
-        this.y = y;
-        this.z = z;
-        this.createdAt = createdAt;
-    }
-
-    public UUID getPlayerUUID() {
-        return playerUUID;
-    }
-
-    public String getHomeName() {
-        return homeName;
-    }
-
-    public String getWorldId() {
-        return worldId;
-    }
-
-    public int getX() {
-        return x;
-    }
-
-    public int getY() {
-        return y;
-    }
-
-    public int getZ() {
-        return z;
-    }
-
-    public long getCreatedAt() {
-        return createdAt;
+        this(playerUUID, homeName, worldId, x, y, z, System.currentTimeMillis());
     }
 
     public BlockPos getBlockPos() {

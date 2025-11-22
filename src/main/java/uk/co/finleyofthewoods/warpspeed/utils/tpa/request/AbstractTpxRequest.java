@@ -1,18 +1,16 @@
 package uk.co.finleyofthewoods.warpspeed.utils.tpa.request;
 
 import net.minecraft.server.network.ServerPlayerEntity;
-import uk.co.finleyofthewoods.warpspeed.utils.tpa.TpaStatus;
 import uk.co.finleyofthewoods.warpspeed.utils.tpa.TpxDirection;
 
 import java.time.Instant;
 import java.util.List;
 
-public abstract class AbstractTpxRequest implements TpxRequestable {
+public abstract class AbstractTpxRequest {
     Instant requestTimestamp;
     ServerPlayerEntity sender;
     List<ServerPlayerEntity> receivers;
     TpxDirection direction;
-    TpaStatus status;
     List<String> necessaryPermissions;
     boolean needsApproval;
 
@@ -21,7 +19,6 @@ public abstract class AbstractTpxRequest implements TpxRequestable {
         setReceivers(receivers);
         setDirection(direction);
         this.necessaryPermissions = necessaryPermissions;
-        this.status = TpaStatus.PENDING;
         this.requestTimestamp = Instant.now();
         this.needsApproval = needsApproval;
     }
@@ -35,11 +32,7 @@ public abstract class AbstractTpxRequest implements TpxRequestable {
     }
 
     public TpxDirection getDirection() {
-        return TpxDirection.SENDER_TO_RECEIVER;
-    }
-
-    public TpaStatus getStatus() {
-        return this.status;
+        return direction;
     }
 
     public void setSender(ServerPlayerEntity sender) {
@@ -54,23 +47,16 @@ public abstract class AbstractTpxRequest implements TpxRequestable {
         this.direction = direction;
     }
 
-    public void setStatus(TpaStatus status) {
-        this.status = status;
-    }
-
     public Instant getRequestTimestamp() {
         return requestTimestamp;
     }
 
     public boolean isActive() {
         Instant now = Instant.now();
-        //todo: make wait time configurable
+        //todo: expiration time configurable
         long elapsedSeconds = now.getEpochSecond() - requestTimestamp.getEpochSecond();
-        if (elapsedSeconds > 120) { // 2 minutes
-            setStatus(TpaStatus.EXPIRED);
-            return false;
-        }
-        return true;
+        // 20 seconds
+        return elapsedSeconds <= 20;
     }
 
     public boolean hasPermission() {
@@ -80,9 +66,13 @@ public abstract class AbstractTpxRequest implements TpxRequestable {
 
     public abstract boolean canTeleport();
 
-    public abstract void teleport();
+    public abstract boolean doTeleport();
 
     public abstract boolean equals(Object obj);
+
+    public boolean needsApproval() {
+        return needsApproval;
+    }
 
 
 

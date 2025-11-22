@@ -1,24 +1,28 @@
 package uk.co.finleyofthewoods.warpspeed.utils.tpa.request.impl;
 
 import net.minecraft.server.network.ServerPlayerEntity;
-import org.apache.commons.lang3.NotImplementedException;
-import uk.co.finleyofthewoods.warpspeed.utils.tpa.TpxDeniedException;
+import uk.co.finleyofthewoods.warpspeed.utils.tpa.TpxDirection;
 import uk.co.finleyofthewoods.warpspeed.utils.tpa.TpxExpiredException;
 import uk.co.finleyofthewoods.warpspeed.utils.tpa.TpxNotAllowedException;
-import uk.co.finleyofthewoods.warpspeed.utils.tpa.request.BasicTpxHereRequest;
-import uk.co.finleyofthewoods.warpspeed.utils.tpa.request.BasicTpxRequest;
+import uk.co.finleyofthewoods.warpspeed.utils.tpa.request.AbstractTpxRequest;
 
 import java.util.List;
 
-public class TpaHereRequest extends BasicTpxHereRequest{
+public class SingleTargetToPrivilegedSenderRequest extends AbstractTpxRequest {
 
-    public TpaHereRequest(ServerPlayerEntity sender, ServerPlayerEntity receiver) {
-        super(sender, List.of(receiver), true, List.of()); //todo: permission
+    public SingleTargetToPrivilegedSenderRequest(ServerPlayerEntity sender, ServerPlayerEntity receiver) {
+        super(sender, List.of(receiver), TpxDirection.RECEIVER_TO_SENDER, false, List.of()); // todo: permissions
     }
 
     @Override
-    public void teleport() throws TpxNotAllowedException, TpxDeniedException, TpxExpiredException {
+    public boolean canTeleport() {
+        return true; //todo: logic
+    }
+
+    @Override
+    public boolean doTeleport() throws TpxNotAllowedException, TpxExpiredException {
         //todo: implement with TeleportUtils
+        return false;
     }
 
     @Override
@@ -26,7 +30,7 @@ public class TpaHereRequest extends BasicTpxHereRequest{
         if (this == obj) return true;
         if (obj == null || getClass() != obj.getClass()) return false;
 
-        TpaHereRequest that = (TpaHereRequest) obj;
+        SingleTargetToPrivilegedSenderRequest that = (SingleTargetToPrivilegedSenderRequest) obj;
 
         if (!getSender().getUuid().equals(that.getSender().getUuid())) return false;
         if (! getReceivers().getFirst().getUuid().equals(that.getReceivers().getFirst().getUuid())) return false;

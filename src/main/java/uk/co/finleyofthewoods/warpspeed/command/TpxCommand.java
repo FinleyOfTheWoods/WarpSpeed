@@ -7,22 +7,19 @@ import com.mojang.brigadier.exceptions.CommandSyntaxException;
 import com.mojang.brigadier.suggestion.SuggestionProvider;
 import com.mojang.brigadier.suggestion.Suggestions;
 import com.mojang.brigadier.suggestion.SuggestionsBuilder;
-import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.command.ServerCommandSource;
 import net.minecraft.server.network.ServerPlayerEntity;
-import net.minecraft.sound.SoundCategory;
-import net.minecraft.sound.SoundEvent;
 import net.minecraft.sound.SoundEvents;
 import net.minecraft.text.Text;
-import net.minecraft.util.Identifier;
-import net.minecraft.util.math.BlockPos;
-import net.minecraft.world.World;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import uk.co.finleyofthewoods.warpspeed.utils.DatabaseManager;
-import uk.co.finleyofthewoods.warpspeed.utils.HomePosition;
-import uk.co.finleyofthewoods.warpspeed.utils.TeleportUtils;
 import uk.co.finleyofthewoods.warpspeed.utils.tpa.TpxRequestManager;
+import uk.co.finleyofthewoods.warpspeed.utils.tpa.TpxRequestNotFoundException;
+import uk.co.finleyofthewoods.warpspeed.utils.tpa.request.impl.MultipleTargetsToPrivilegedSenderRequest;
+import uk.co.finleyofthewoods.warpspeed.utils.tpa.request.impl.SenderToSingleTargetRequest;
+import uk.co.finleyofthewoods.warpspeed.utils.tpa.request.impl.SingleTargetToPrivilegedSenderRequest;
+import uk.co.finleyofthewoods.warpspeed.utils.tpa.request.impl.SingleTargetToSingleSenderRequest;
 
 import java.util.List;
 import java.util.NoSuchElementException;
@@ -66,24 +63,54 @@ public class TpxCommand {
         return builder.buildFuture();
     }
 
-    public static void register(CommandDispatcher<ServerCommandSource> dispatcher) {
+    public static void register(CommandDispatcher<ServerCommandSource> dispatcher, DatabaseManager dbManager) {
         dispatcher.register(literal("tpa")
+                .requires(source -> source.getPlayer() != null)
+                .then(argument("target", StringArgumentType.word())
+                        .suggests(makeTargetSuggestions())
+                        .executes(context -> executeTpaRequest(context, dbManager)))
+        );
+        dispatcher.register(literal("tpahere")
+                .requires(source -> source.getPlayer() != null)
+                .then(argument("target", StringArgumentType.word())
+                        .suggests(makeTargetSuggestions())
+                        .executes(context -> executeTpaHereRequest(context, dbManager)))
+        );
+        dispatcher.register(literal("tpdeny")
+                .requires(source -> source.getPlayer() != null)
+                        .executes(context -> executeTpaDenyRequest(context, false))
+                            .then(argument("target", StringArgumentType.word()) //optional parameter
+                                    .suggests(makeTargetSuggestions())
+                                    .executes(context -> executeTpaDenyRequest(context, true)))
+        );
+        dispatcher.register(literal("tpaccept")
+                .requires(source -> source.getPlayer() != null)
+                .executes( context -> executeTpaAcceptRequest(context, false))
+                .then(argument("target", StringArgumentType.word()) //optional parameter
+                        .suggests(makeTargetSuggestions())
+                        .executes(context -> executeTpaAcceptRequest(context, true)))
+
+        );
+        dispatcher.register(literal("tpcancel")
+                .requires(source -> source.getPlayer() != null)
+                .executes( context -> executeTpaCancelRequest(context, false))
+                .then(argument("target", StringArgumentType.word()) //optional parameter
+                        .suggests(makeTargetSuggestions())
+                        .executes(context -> executeTpaCancelRequest(context, true)))
+        );
+        /*dispatcher.register(literal("tphere")
                 .requires(source -> source.getPlayer() != null) //todo: permission
                 .then(argument("target", StringArgumentType.word())
                         .suggests(makeTargetSuggestions())
-                        .executes(TpxCommand::executeTpaRequest))
+                        .executes(TpxCommand::executeTpHereRequest))
         );
-        dispatcher.register(literal("tpdeny")
+        dispatcher.register(literal("tphereall")
                 .requires(source -> source.getPlayer() != null) //todo: permission
-                        .executes(TpxCommand::executeTpaDenyRequestWithoutTarget)
-                            .then(argument("target", StringArgumentType.word()) //optional parameter
-                                    .suggests(makeTargetSuggestions())
-                                    .executes(TpxCommand::executeTpaDenyRequestWithTarget))
-        );
-
+                .executes(TpxCommand::executeTpHereAllRequest)
+        );*/
     }
 
-   private static int executeTpaRequest(CommandContext<ServerCommandSource> context) {
+    private static int executeTpaRequest(CommandContext<ServerCommandSource> context, DatabaseManager dbManager) {
         try {
             ServerCommandSource source = context.getSource();
             ServerPlayerEntity player = source.getPlayerOrThrow();
@@ -92,15 +119,14 @@ public class TpxCommand {
             ServerPlayerEntity target = context.getSource().getWorld().getPlayers( playerEntity -> String.valueOf(playerEntity.getName().getString()).equals(targetPlayerName)).getFirst();
 
             if (player.getUuid().equals(target.getUuid())) {
-                player.sendMessage(Text.literal("Can't teleport to yourself."), false);
+                player.sendMessage(Text.literal("§o§cCan't teleport to yourself."), false);
                 return 0;
             }
-
-            boolean success = TpxRequestManager.makeTpaRequest(player, target); // todo: implement me
+            boolean success = TpxRequestManager.makeSenderToSingleTargetRequest(new SenderToSingleTargetRequest(player, target), dbManager);
 
             if (success) {
-                player.sendMessage(Text.literal("Sent teleport request to: " + targetPlayerName), false);
-                target.sendMessage(Text.literal(player.getName().getString() + " wants to teleport to your location. Accept with /tpaaccept or /tpaaccept <mcusername> or deny with /tpadeny."));
+                player.sendMessage(Text.literal("§6Sent teleport request to: " + targetPlayerName), false);
+                target.sendMessage(Text.literal("§6" + player.getName().getString() + " wants to teleport to your location. Accept with §6§o/tpaaccept§6 or §6§o/tpaccept <mcusername>§6 or deny with §6§o/tpdeny§6 or §6§o/tpdeny <mcusername>§6."));
 
                 //for some fucking reason player and target are swapped... this will play the sound on the target's side
                 player.playSound(SoundEvents.ENTITY_EXPERIENCE_ORB_PICKUP, 2f, 0.7f );
@@ -108,14 +134,10 @@ public class TpxCommand {
             } else {
                 return 0;
             }
-        } catch (CommandSyntaxException e) {
-            LOGGER.error("Failed to execute /tpa command", e);
-            return 0;
-
-        } catch (NoSuchElementException e) {
-            LOGGER.error("Failed to find target player", e);
-            context.getSource().sendMessage(Text.literal("Couldn't find that player."));
-
+        } catch (TpxRequestNotFoundException | NoSuchElementException | CommandSyntaxException e) {
+            LOGGER.debug("Request failed", e);
+            Optional<ServerPlayerEntity> sender = Optional.ofNullable(context.getSource().getPlayer());
+            sender.ifPresent(player -> player.sendMessage(Text.literal("§o§c An error has occured: " + e.getMessage()), false));
             return 0;
         } catch (Exception e) {
             LOGGER.error("Unexpected Exception: Failed to execute /tpa command", e);
@@ -123,48 +145,116 @@ public class TpxCommand {
         }
    }
 
-
-    private static int executeTpaDenyRequestWithTarget(CommandContext<ServerCommandSource> context) {
-        String targetPlayerName = StringArgumentType.getString(context, "target");
-
-        Optional<ServerPlayerEntity> target = Optional.empty();
-        List<ServerPlayerEntity> foundTargetPlayer = context.getSource().getWorld().getPlayers( playerEntity -> String.valueOf(playerEntity.getName().getString()).equals(targetPlayerName));
-        if (foundTargetPlayer.isEmpty()) {
-            target = Optional.empty();
-        } else {
-            target = Optional.of(foundTargetPlayer.getFirst());
-        }
-        return executeTpaDenyRequest(context, target);
-    }
-    private static int executeTpaDenyRequestWithoutTarget(CommandContext<ServerCommandSource> context) {
-        return executeTpaDenyRequest(context, Optional.empty());
-    }
-
-    private static int executeTpaDenyRequest(CommandContext<ServerCommandSource> context, Optional<ServerPlayerEntity> target) {
+    private static int executeTpaHereRequest(CommandContext<ServerCommandSource> context, DatabaseManager dbManager) {
         try {
             ServerCommandSource source = context.getSource();
             ServerPlayerEntity player = source.getPlayerOrThrow();
+            String targetPlayerName = StringArgumentType.getString(context, "target");
 
-            if (target.isPresent() && player.getUuid().equals(target.get().getUuid())) {
-                player.sendMessage(Text.literal("<Server>: Aw! You might deny yourself, but I'm never gonna give you up, never gonna let you down,"), false);
-                player.sendMessage(Text.literal("Never gonna run around and desert you."), false);
-                player.sendMessage(Text.literal("Never gonna make you cry, never gonna say goodbye" ), false);
-                player.sendMessage(Text.literal("Never gonna tell a lie and hurt you."), false);
+            ServerPlayerEntity target = context.getSource().getWorld().getPlayers( playerEntity -> String.valueOf(playerEntity.getName().getString()).equals(targetPlayerName)).getFirst();
+
+            boolean success = TpxRequestManager.makeSingleTargetToSenderRequest(new SingleTargetToSingleSenderRequest(player, target), dbManager);
+
+            if (success) {
+                player.sendMessage(Text.literal("§6Sent teleport request to: " + targetPlayerName), false);
+                target.sendMessage(Text.literal("§6"+ player.getName().getString() + " wants you to teleport to their location. Accept with §6§o/tpaaccept§6 or §6§o/tpaaccept <mcusername>§6 or deny with §6§o/tpdeny§6 or §6§o/tpdeny <mcusername>§6."));
+
+                //for some fucking reason player and target are swapped... this will play the sound on the target's side
+                player.playSound(SoundEvents.ENTITY_EXPERIENCE_ORB_PICKUP, 2f, 0.7f );
                 return 1;
+            } else {
+                return 0;
             }
+        } catch (TpxRequestNotFoundException | NoSuchElementException | CommandSyntaxException e) {
+            LOGGER.debug("Request failed", e);
+            Optional<ServerPlayerEntity> sender = Optional.ofNullable(context.getSource().getPlayer());
+            sender.ifPresent(player -> player.sendMessage(Text.literal("§o§c An error has occured: " + e.getMessage()), false));
+            return 0;
+        } catch (Exception e) {
+            LOGGER.error("Unexpected Exception: Failed to execute /tpahere command", e);
+            return 0;
+        }
+    }
 
-            boolean success = TpxRequestManager.denyTpaRequest(player, target); // todo: implement me
+    private static int executeTpHereRequest(CommandContext<ServerCommandSource> context, DatabaseManager dbManager) {
+        try {
+            ServerCommandSource source = context.getSource();
+            ServerPlayerEntity player = source.getPlayerOrThrow();
+            String targetPlayerName = StringArgumentType.getString(context, "target");
+
+            ServerPlayerEntity target = context.getSource().getWorld().getPlayers( playerEntity -> String.valueOf(playerEntity.getName().getString()).equals(targetPlayerName)).getFirst();
+
+            boolean success = TpxRequestManager.makeSingleTargetToPrivilegedSenderRequest(new SingleTargetToPrivilegedSenderRequest(player, target));
             if (success) {
                 return 1;
             } else {
                 return 0;
             }
-        } catch (CommandSyntaxException e) {
-            LOGGER.error("Failed to execute /tpdeny command", e);
+        } catch (TpxRequestNotFoundException | NoSuchElementException | CommandSyntaxException e) {
+            LOGGER.debug("Request failed", e);
+            Optional<ServerPlayerEntity> sender = Optional.ofNullable(context.getSource().getPlayer());
+            sender.ifPresent(player -> player.sendMessage(Text.literal("§o§c An error has occured: " + e.getMessage()), false));
             return 0;
+        } catch (Exception e) {
+            LOGGER.error("Unexpected Exception: Failed to execute /tphere command", e);
+            return 0;
+        }
+    }
 
-        } catch (NoSuchElementException e) {
-            LOGGER.error("Failed to find target player", e);
+    private static int executeTpHereAllRequest(CommandContext<ServerCommandSource> context, DatabaseManager dbManager) {
+        try {
+            ServerCommandSource source = context.getSource();
+            ServerPlayerEntity player = source.getPlayerOrThrow();
+
+            boolean success = TpxRequestManager.makeMultiTargetsToSenderRequest(new MultipleTargetsToPrivilegedSenderRequest(player));
+            if (success) {
+                return 1;
+            } else {
+                return 0;
+            }
+        } catch (TpxRequestNotFoundException | NoSuchElementException | CommandSyntaxException e) {
+            LOGGER.debug("Request failed", e);
+            Optional<ServerPlayerEntity> sender = Optional.ofNullable(context.getSource().getPlayer());
+            sender.ifPresent(player -> player.sendMessage(Text.literal("§o§c An error has occured: " + e.getMessage()), false));
+            return 0;
+        } catch (Exception e) {
+            LOGGER.error("Unexpected Exception: Failed to execute /tphereall command", e);
+            return 0;
+        }
+    }
+
+    private static int executeTpaDenyRequest(CommandContext<ServerCommandSource> context, boolean hasTargetArgument) {
+        try {
+            Optional<ServerPlayerEntity> target = Optional.empty();
+            if ( hasTargetArgument ) {
+                String targetPlayerName = StringArgumentType.getString(context, "target");
+                List<ServerPlayerEntity> foundTargetPlayer = context.getSource().getWorld().getPlayers( playerEntity -> String.valueOf(playerEntity.getName().getString()).equals(targetPlayerName));
+                if (!foundTargetPlayer.isEmpty()) {
+                    target = Optional.of(foundTargetPlayer.getFirst());
+                }
+            }
+
+            ServerCommandSource source = context.getSource();
+            ServerPlayerEntity player = source.getPlayerOrThrow();
+
+            if (target.isPresent() && player.getUuid().equals(target.get().getUuid())) {
+                player.sendMessage(Text.literal("§o§9<Server>: Aw! You might deny yourself, but I'm never gonna give you up, never gonna let you down,"), false);
+                player.sendMessage(Text.literal("§o§9Never gonna run around and desert you."), false);
+                player.sendMessage(Text.literal("§o§9Never gonna make you cry, never gonna say goodbye." ), false);
+                player.sendMessage(Text.literal("§o§9Never gonna tell a lie and hurt you."), false);
+                return 1;
+            }
+
+            boolean success = TpxRequestManager.denySingleTpaRequest(player, target);
+            if (success) {
+                return 1;
+            } else {
+                return 0;
+            }
+        } catch (TpxRequestNotFoundException | NoSuchElementException | CommandSyntaxException e) {
+            LOGGER.debug("Request failed", e);
+            Optional<ServerPlayerEntity> sender = Optional.ofNullable(context.getSource().getPlayer());
+            sender.ifPresent(player -> player.sendMessage(Text.literal("§o§c An error has occured: " + e.getMessage()), false));
             return 0;
         } catch (Exception e) {
             LOGGER.error("Unexpected Exception: Failed to execute /tpdeny command", e);
@@ -172,92 +262,75 @@ public class TpxCommand {
         }
     }
 
+    private static int executeTpaAcceptRequest(CommandContext<ServerCommandSource> context, boolean hasTargetArgument) {
+        try {
+            Optional<ServerPlayerEntity> sender = Optional.empty();
+            if ( hasTargetArgument ) {
+                String targetPlayerName = StringArgumentType.getString(context, "target");
+                List<ServerPlayerEntity> foundTargetPlayer = context.getSource().getWorld().getPlayers( playerEntity -> String.valueOf(playerEntity.getName().getString()).equals(targetPlayerName));
+                if (!foundTargetPlayer.isEmpty()) {
+                    sender = Optional.of(foundTargetPlayer.getFirst());
+                }
+            }
 
-//   private static int executeSetHome(CommandContext<ServerCommandSource> context, DatabaseManager dbManager) {
-//        try {
-//            ServerCommandSource source = context.getSource();
-//            ServerPlayerEntity player = source.getPlayerOrThrow();
-//            String homeName = StringArgumentType.getString(context, "homeName");
-//
-//            // check if a home already exists with this name
-//            boolean homeExists = dbManager.homeExists(player.getUuid(), homeName);
-//            if (homeExists) {
-//                player.sendMessage(Text.literal("Home '" + homeName + "' already exists"), false);
-//                return 0;
-//            }
-//
-//            // check home limit
-//            int homeCount = dbManager.getHomeCount(player.getUuid());
-//            if (homeCount >= MAX_HOME_PER_PLAYER) {
-//                player.sendMessage(Text.literal("You have reached the maximum number of homes (" + MAX_HOME_PER_PLAYER + ")"), false);
-//                return 0;
-//            }
-//
-//            BlockPos pos = player.getBlockPos();
-//            World world = player.getEntityWorld();
-//            String worldId = world.getRegistryKey().getValue().toString();
-//
-//            HomePosition home = new HomePosition(player.getUuid(), homeName, worldId, pos.getX(), pos.getY(), pos.getZ());
-//            boolean success = dbManager.saveHome(home);
-//            if (success) {
-//                player.sendMessage(Text.literal("Home '" + homeName + "' set at " + pos.getX() + ", " + pos.getY() + ", " + pos.getZ()), false);
-//                return 1;
-//            } else {
-//                player.sendMessage(Text.literal("Failed to set home '" + homeName + "'"), false);
-//                return 0;
-//            }
-//        } catch (Exception e) {
-//            LOGGER.error("Unexpected Exception: Failed to execute /setHome command", e);
-//            return 0;
-//        }
-//    }
-//
-//    private static int executeDeleteHome(CommandContext<ServerCommandSource> context, DatabaseManager dbManager) {
-//        try {
-//            ServerCommandSource source = context.getSource();
-//            ServerPlayerEntity player = source.getPlayerOrThrow();
-//            String homeName = StringArgumentType.getString(context, "homeName");
-//
-//            boolean success = dbManager.removeHome(player.getUuid(), homeName);
-//
-//            if (success) {
-//                player.sendMessage(Text.literal("Home '" + homeName + "' deleted"), false);
-//                return 1;
-//            } else {
-//                player.sendMessage(Text.literal("Failed to delete home '" + homeName + "'"), false);
-//                return 0;
-//            }
-//        } catch(CommandSyntaxException e) {
-//            LOGGER.error("Failed to execute /delHome command", e);
-//            return 0;
-//        } catch (Exception e) {
-//            LOGGER.error("Unexpected Exception: Failed to execute /delHome command", e);
-//            return 0;
-//        }
-//    }
-//
-//    private static int executeListHomes(CommandContext<ServerCommandSource> context, DatabaseManager dbManager) {
-//        try {
-//            ServerCommandSource source = context.getSource();
-//            ServerPlayerEntity player = source.getPlayerOrThrow();
-//            List<HomePosition> homes = dbManager.getPlayerHomes(player.getUuid());
-//            if (homes.isEmpty()) {
-//                player.sendMessage(Text.literal("You have no homes set"), false);
-//                return 0;
-//            }
-//
-//            player.sendMessage(Text.literal("Your homes:"), false);
-//            for (HomePosition home : homes) {
-//                player.sendMessage(Text.literal("    " + home.getHomeName() + " at " + home.getX() + ", " + home.getY() + ", " + home.getZ()), false);
-//            }
-//
-//            return 1;
-//        } catch(CommandSyntaxException e) {
-//            LOGGER.error("Failed to execute /deleteWarp command", e);
-//            return 0;
-//        } catch (Exception e) {
-//            LOGGER.error("Unexpected Exception: Failed to execute /deleteWarp command", e);
-//            return 0;
-//        }
-//    }
+            ServerCommandSource source = context.getSource();
+            ServerPlayerEntity receiver = source.getPlayerOrThrow();
+
+            if (sender.isPresent() && receiver.getUuid().equals(sender.get().getUuid())) {
+                receiver.sendMessage(Text.literal("§o§9<Server>: It's good to accept yourself."), false);
+                return 1;
+            }
+
+            boolean success = TpxRequestManager.acceptSingleTpaRequest(receiver, sender);
+            if (success) {
+                return 1;
+            } else {
+                return 0;
+            }
+        } catch (TpxRequestNotFoundException | NoSuchElementException | CommandSyntaxException e) {
+            LOGGER.debug("Request failed", e);
+            Optional<ServerPlayerEntity> sender = Optional.ofNullable(context.getSource().getPlayer());
+            sender.ifPresent(player -> player.sendMessage(Text.literal("§o§c An error has occured: " + e.getMessage()), false));
+            return 0;
+        } catch (Exception e) {
+            LOGGER.error("Unexpected Exception: Failed to execute /tpaccept command", e);
+            return 0;
+        }
+    }
+
+    private static int executeTpaCancelRequest(CommandContext<ServerCommandSource> context, boolean hasTargetArgument) {
+        try {
+            Optional<ServerPlayerEntity> target = Optional.empty();
+            if ( hasTargetArgument ) {
+                String targetPlayerName = StringArgumentType.getString(context, "target");
+                List<ServerPlayerEntity> foundTargetPlayer = context.getSource().getWorld().getPlayers( playerEntity -> String.valueOf(playerEntity.getName().getString()).equals(targetPlayerName));
+                if (!foundTargetPlayer.isEmpty()) {
+                    target = Optional.of(foundTargetPlayer.getFirst());
+                }
+            }
+
+            ServerCommandSource source = context.getSource();
+            ServerPlayerEntity player = source.getPlayerOrThrow();
+
+            if (target.isPresent() && player.getUuid().equals(target.get().getUuid())) {
+                player.sendMessage(Text.literal("§o§9<Server>: Why would you want to cancel yourself? "), false);
+                return 1;
+            }
+
+            boolean success = TpxRequestManager.cancelSingleTpaRequest(player, target);
+            if (success) {
+                return 1;
+            } else {
+                return 0;
+            }
+        } catch (TpxRequestNotFoundException | NoSuchElementException | CommandSyntaxException e) {
+            LOGGER.debug("Request failed", e);
+            Optional<ServerPlayerEntity> sender = Optional.ofNullable(context.getSource().getPlayer());
+            sender.ifPresent(player -> player.sendMessage(Text.literal("§o§c An error has occured: " + e.getMessage()), false));
+            return 0;
+        } catch (Exception e) {
+            LOGGER.error("Unexpected Exception: Failed to execute /tpcancel command", e);
+            return 0;
+        }
+    }
 }

@@ -33,7 +33,7 @@ public class HomeCommand {
             try {
                 ServerPlayerEntity player = context.getSource().getPlayerOrThrow();
                 List<HomePosition> homeNames = dbManager.getPlayerHomes(player.getUuid());
-                List<String> homeNamesList = homeNames.stream().map(HomePosition::getHomeName).toList();
+                List<String> homeNamesList = homeNames.stream().map(HomePosition::homeName).toList();
                 return suggestMatching(homeNamesList, builder);
             } catch (CommandSyntaxException e) {
                 return Suggestions.empty();
@@ -194,7 +194,7 @@ public class HomeCommand {
 
             player.sendMessage(Text.literal("Your homes:"), false);
             for (HomePosition home : homes) {
-                player.sendMessage(Text.literal("    " + home.getHomeName() + " at " + home.getX() + ", " + home.getY() + ", " + home.getZ()), false);
+                player.sendMessage(Text.literal("    " + home.homeName() + " at " + home.x() + ", " + home.y() + ", " + home.z()), false);
             }
 
             return 1;

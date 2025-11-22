@@ -3,6 +3,7 @@ package uk.co.finleyofthewoods.warpspeed;
 import net.fabricmc.api.ModInitializer;
 import net.fabricmc.fabric.api.command.v2.CommandRegistrationCallback;
 import net.fabricmc.fabric.api.event.lifecycle.v1.ServerLifecycleEvents;
+import net.fabricmc.fabric.api.event.lifecycle.v1.ServerTickEvents;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import uk.co.finleyofthewoods.warpspeed.command.*;
@@ -27,6 +28,8 @@ public class Warpspeed implements ModInitializer {
             dbManager.close();
         });
 
+        ServerTickEvents.END_SERVER_TICK.register(server -> TpxRequestManager.tick());
+
         /// Register commands
         CommandRegistrationCallback.EVENT.register(((dispatcher, registryAccess, environment) -> {
             /// Handle /spawn command and teleport the player to the world spawn location.
@@ -38,7 +41,7 @@ public class Warpspeed implements ModInitializer {
             /// Handle /warp command and teleport the player to the warp location.
             WarpCommand.register(dispatcher, dbManager);
             /// Handle /tpa command and request a teleport from sender to receiver.
-            TpxCommand.register(dispatcher);
+            TpxCommand.register(dispatcher, dbManager);
             /// Handle /tpahere command and request a teleport from receiver to sender.
             /// Handle /tpaaccept command and accept a teleport from sender to receiver.
             /// Handle /tpadeny command and deny a teleport from sender to receiver.

@@ -1,13 +1,14 @@
 package uk.co.finleyofthewoods.warpspeed.utils;
 
+import net.minecraft.server.network.ServerPlayerEntity;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.File;
 import java.sql.*;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.UUID;
+import java.time.Instant;
+import java.time.temporal.ChronoField;
+import java.util.*;
 
 public class DatabaseManager {
     private static final Logger LOGGER = LoggerFactory.getLogger(DatabaseManager.class);
@@ -99,6 +100,27 @@ public class DatabaseManager {
             stmt.execute(createWarpsIndexSQL);
             LOGGER.info("Warps index created or already exists");
         }
+
+        String createPlayerBlockListTableSQL = """
+                    CREATE TABLE IF NOT EXISTS blocklist (
+                        id INTEGER PRIMARY KEY AUTOINCREMENT,
+                        blocker_player_uuid TEXT NOT NULL,
+                        blocked_player_uuid TEXT NOT NULL,
+                        created_at INTEGER NOT NULL,
+                        UNIQUE(blocker_player_uuid, blocked_player_uuid)
+                    );
+                """;
+        try (Statement stmt = connection.createStatement()) {
+            stmt.execute(createPlayerBlockListTableSQL);
+            LOGGER.info("Blocklist table created or already exists");
+        }
+
+        // Create an index for faster lookups
+        String createBlocklistIndexSQL = "CREATE INDEX IF NOT EXISTS idx_blocklist_player ON blocklist(blocker_player_uuid);";
+        try (Statement stmt = connection.createStatement()) {
+            stmt.execute(createBlocklistIndexSQL);
+            LOGGER.info("Blocklist index created or already exists");
+        }
     }
     /**
      * Saves a home position to the database.
@@ -120,16 +142,16 @@ public class DatabaseManager {
         try {
             ensureConnection();
             try (PreparedStatement pstmt = connection.prepareStatement(sql)) {
-                pstmt.setString(1, home.getPlayerUUID().toString());
-                pstmt.setString(2, home.getHomeName());
-                pstmt.setString(3, home.getWorldId());
-                pstmt.setInt(4, home.getX());
-                pstmt.setInt(5, home.getY());
-                pstmt.setInt(6, home.getZ());
-                pstmt.setLong(7, home.getCreatedAt());
+                pstmt.setString(1, home.playerUUID().toString());
+                pstmt.setString(2, home.homeName());
+                pstmt.setString(3, home.worldId());
+                pstmt.setInt(4, home.x());
+                pstmt.setInt(5, home.y());
+                pstmt.setInt(6, home.z());
+                pstmt.setLong(7, home.createdAt());
 
                 int affected = pstmt.executeUpdate();
-                LOGGER.debug("Saved home '{}' for player {}", home.getHomeName(), home.getPlayerUUID());
+                LOGGER.debug("Saved home '{}' for player {}", home.homeName(), home.playerUUID());
                 return affected > 0;
             }
         } catch (SQLException e) {
@@ -284,17 +306,17 @@ public class DatabaseManager {
         try {
             ensureConnection();
             try (PreparedStatement pstmt = connection.prepareStatement(sql)) {
-                pstmt.setString(1, warp.getPlayerUUID().toString());
-                pstmt.setString(2, warp.getWarpName());
-                pstmt.setString(3, warp.getWorldId());
-                pstmt.setInt(4, warp.getX());
-                pstmt.setInt(5, warp.getY());
-                pstmt.setInt(6, warp.getZ());
+                pstmt.setString(1, warp.playerUUID().toString());
+                pstmt.setString(2, warp.warpName());
+                pstmt.setString(3, warp.worldId());
+                pstmt.setInt(4, warp.x());
+                pstmt.setInt(5, warp.y());
+                pstmt.setInt(6, warp.z());
                 pstmt.setBoolean(7, warp.isPrivate());
-                pstmt.setLong(8, warp.getCreatedAt());
+                pstmt.setLong(8, warp.createdAt());
 
                 int affected = pstmt.executeUpdate();
-                LOGGER.debug("Saved warp '{}' for player {}", warp.getWarpName(), warp.getPlayerUUID());
+                LOGGER.debug("Saved warp '{}' for player {}", warp.warpName(), warp.playerUUID());
                 return affected > 0;
             }
         } catch (SQLException e) {
@@ -435,6 +457,136 @@ public class DatabaseManager {
         }
 
         return warpNames;
+    }
+
+     /**
+     * Adds a blocked player to the database.
+     */
+    public boolean addPlayerToBlockList(UUID blockerUUID, UUID blockedPLayerUUID) {
+        String sql = """
+            INSERT INTO blocklist (blocker_player_uuid, blocked_player_uuid, created_at)
+            VALUES (?, ?, ?)
+        """;
+
+        try {
+            ensureConnection();
+            try (PreparedStatement pstmt = connection.prepareStatement(sql)) {
+                pstmt.setString(1, blockerUUID.toString());
+                pstmt.setString(2, blockedPLayerUUID.toString());
+                pstmt.setLong(3, System.currentTimeMillis());
+
+                int affected = pstmt.executeUpdate();
+                LOGGER.debug("Added player '{}' to blocklist for player {}", blockedPLayerUUID, blockerUUID);
+                return affected > 0;
+            }
+        } catch (SQLException e) {
+            LOGGER.error("Failed to save player to blocklist", e);
+            return false;
+        }
+    }
+
+    /**
+     * Retrieves a specific home position for a player.
+     */
+    public Map.Entry<UUID,UUID> getBlockedPlayerForPlayer(UUID blockerUUID, UUID blockedUUID) {
+        String sql = "SELECT * FROM blocklist WHERE blocker_player_uuid = ? AND blocked_player_uuid = ? LIMIT 1";
+
+        try {
+            ensureConnection();
+            try (PreparedStatement pstmt = connection.prepareStatement(sql)) {
+                pstmt.setString(1, blockerUUID.toString());
+                pstmt.setString(2, blockedUUID.toString());
+
+                ResultSet rs = pstmt.executeQuery();
+                if (rs.next()) {
+                    return Map.entry(
+                            UUID.fromString(rs.getString("blocker_player_uuid")),
+                            UUID.fromString(rs.getString("blocked_player_uuid"))
+                    );
+                } else {
+                    LOGGER.debug("Blocklist entry '{}' not found for player {}", blockedUUID, blockerUUID);
+                    return null;
+                }
+            }
+        } catch (SQLException e) {
+            LOGGER.error("Failed to get blocklist entry", e);
+            return null;
+        }
+    }
+
+    /**
+     * Retrieves all homes for a specific player.
+     */
+    public BlocklistOfPlayer getBlocklistForPlayer(UUID blockerUUID) {
+        Map<UUID, Long> blockedByBlockerAt = new HashMap<>();
+        String sql = "SELECT * FROM blocklist WHERE blocker_player_uuid = ?";
+
+        try {
+            ensureConnection();
+            try (PreparedStatement pstmt = connection.prepareStatement(sql)) {
+                pstmt.setString(1, blockerUUID.toString());
+
+                ResultSet rs = pstmt.executeQuery();
+                while (rs.next()) {
+                    blockedByBlockerAt.put(
+                            UUID.fromString(rs.getString("blocked_player_uuid")),
+                            rs.getLong("created_at")
+                    );
+                }
+                
+                return new BlocklistOfPlayer(blockerUUID, blockedByBlockerAt);
+            }
+        } catch (SQLException e) {
+            LOGGER.error("Failed to get player homes", e);
+            return new BlocklistOfPlayer(blockerUUID, Map.of());
+        }
+    }
+
+    /**
+     * Removes a home from the database.
+     */
+    public boolean removePlayerFromBlocklist(UUID blockerPlayerUUID, UUID blockedPlayerUUID) {
+        String sql = "DELETE FROM homes WHERE blocker_player_uuid = ? AND blocked_player_uuid = ?";
+
+        try {
+            ensureConnection();
+            try (PreparedStatement pstmt = connection.prepareStatement(sql)) {
+                pstmt.setString(1, blockerPlayerUUID.toString());
+                pstmt.setString(2, blockedPlayerUUID.toString());
+
+                int affected = pstmt.executeUpdate();
+                LOGGER.debug("Removed player '{}' from blocklist of  player {} (affected rows: {})", blockedPlayerUUID, blockerPlayerUUID, affected);
+                return affected > 0;
+            }
+        } catch (SQLException e) {
+            LOGGER.error("Failed to remove player from blocklist", e);
+            return false;
+        }
+    }
+
+    /**
+     * Checks if a home exists for a player.
+     */
+    public boolean isPlayerBlockedByPlayer(UUID blockerPlayerUUID, UUID blockedPlayerUUID) {
+        String sql = "SELECT COUNT(*) FROM homes WHERE blocker_player_uuid = ? AND blocked_player_uuid = ?";
+
+        try {
+            ensureConnection();
+            try (PreparedStatement pstmt = connection.prepareStatement(sql)) {
+                pstmt.setString(1, blockerPlayerUUID.toString());
+                pstmt.setString(2, blockedPlayerUUID.toString());
+
+                ResultSet rs = pstmt.executeQuery();
+                if (rs.next()) {
+                    return rs.getInt(1) > 0;
+                } else {
+                    LOGGER.debug("Player '{}' is not blocked by player '{}')", blockedPlayerUUID, blockerPlayerUUID);
+                    return false;
+                }
+            }
+        } catch (SQLException e) {
+            return false;
+        }
     }
 
     /**
