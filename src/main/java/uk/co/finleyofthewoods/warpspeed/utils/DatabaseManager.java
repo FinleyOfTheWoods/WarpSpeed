@@ -1,13 +1,10 @@
 package uk.co.finleyofthewoods.warpspeed.utils;
 
-import net.minecraft.server.network.ServerPlayerEntity;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.File;
 import java.sql.*;
-import java.time.Instant;
-import java.time.temporal.ChronoField;
 import java.util.*;
 
 public class DatabaseManager {
@@ -104,10 +101,10 @@ public class DatabaseManager {
         String createPlayerBlockListTableSQL = """
                     CREATE TABLE IF NOT EXISTS blocklist (
                         id INTEGER PRIMARY KEY AUTOINCREMENT,
-                        blocker_player_uuid TEXT NOT NULL,
-                        blocked_player_uuid TEXT NOT NULL,
+                        blocker_player_username TEXT NOT NULL,
+                        blocked_player_username TEXT NOT NULL,
                         created_at INTEGER NOT NULL,
-                        UNIQUE(blocker_player_uuid, blocked_player_uuid)
+                        UNIQUE(blocker_player_username, blocked_player_username)
                     );
                 """;
         try (Statement stmt = connection.createStatement()) {
@@ -116,7 +113,7 @@ public class DatabaseManager {
         }
 
         // Create an index for faster lookups
-        String createBlocklistIndexSQL = "CREATE INDEX IF NOT EXISTS idx_blocklist_player ON blocklist(blocker_player_uuid);";
+        String createBlocklistIndexSQL = "CREATE INDEX IF NOT EXISTS idx_blocklist_player ON blocklist(blocker_player_username);";
         try (Statement stmt = connection.createStatement()) {
             stmt.execute(createBlocklistIndexSQL);
             LOGGER.info("Blocklist index created or already exists");
@@ -462,21 +459,21 @@ public class DatabaseManager {
      /**
      * Adds a blocked player to the database.
      */
-    public boolean addPlayerToBlockList(UUID blockerUUID, UUID blockedPLayerUUID) {
+    public boolean addPlayerToBlockList(String blockedPLayerUserName, String blockerUserName) {
         String sql = """
-            INSERT INTO blocklist (blocker_player_uuid, blocked_player_uuid, created_at)
+            INSERT INTO blocklist (blocker_player_username, blocked_player_username, created_at)
             VALUES (?, ?, ?)
         """;
 
         try {
             ensureConnection();
             try (PreparedStatement pstmt = connection.prepareStatement(sql)) {
-                pstmt.setString(1, blockerUUID.toString());
-                pstmt.setString(2, blockedPLayerUUID.toString());
+                pstmt.setString(1, blockerUserName);
+                pstmt.setString(2, blockedPLayerUserName);
                 pstmt.setLong(3, System.currentTimeMillis());
 
                 int affected = pstmt.executeUpdate();
-                LOGGER.debug("Added player '{}' to blocklist for player {}", blockedPLayerUUID, blockerUUID);
+                LOGGER.debug("Added player '{}' to blocklist for player {}", blockedPLayerUserName, blockerUserName);
                 return affected > 0;
             }
         } catch (SQLException e) {
@@ -486,25 +483,25 @@ public class DatabaseManager {
     }
 
     /**
-     * Retrieves a specific home position for a player.
+     * Retrieves a specific blocklist entry for a player.
      */
-    public Map.Entry<UUID,UUID> getBlockedPlayerForPlayer(UUID blockerUUID, UUID blockedUUID) {
-        String sql = "SELECT * FROM blocklist WHERE blocker_player_uuid = ? AND blocked_player_uuid = ? LIMIT 1";
+    public Map.Entry<String,String> getBlockedPlayerForPlayer(String blockerUserName, String blockedUserName) {
+        String sql = "SELECT * FROM blocklist WHERE blocker_player_username = ? AND blocked_player_username = ? LIMIT 1";
 
         try {
             ensureConnection();
             try (PreparedStatement pstmt = connection.prepareStatement(sql)) {
-                pstmt.setString(1, blockerUUID.toString());
-                pstmt.setString(2, blockedUUID.toString());
+                pstmt.setString(1, blockerUserName);
+                pstmt.setString(2, blockedUserName);
 
                 ResultSet rs = pstmt.executeQuery();
                 if (rs.next()) {
                     return Map.entry(
-                            UUID.fromString(rs.getString("blocker_player_uuid")),
-                            UUID.fromString(rs.getString("blocked_player_uuid"))
+                            rs.getString("blocker_player_username"),
+                            rs.getString("blocked_player_username")
                     );
                 } else {
-                    LOGGER.debug("Blocklist entry '{}' not found for player {}", blockedUUID, blockerUUID);
+                    LOGGER.debug("Blocklist entry '{}' not found for player {}", blockedUserName, blockerUserName);
                     return null;
                 }
             }
@@ -515,47 +512,47 @@ public class DatabaseManager {
     }
 
     /**
-     * Retrieves all homes for a specific player.
+     * Retrieves all blocked players for a specific player.
      */
-    public BlocklistOfPlayer getBlocklistForPlayer(UUID blockerUUID) {
-        Map<UUID, Long> blockedByBlockerAt = new HashMap<>();
-        String sql = "SELECT * FROM blocklist WHERE blocker_player_uuid = ?";
+    public BlocklistOfPlayer getBlocklistForPlayer(String blockerUserName) {
+        Map<String, Long> blockedByBlockerAt = new HashMap<>();
+        String sql = "SELECT * FROM blocklist WHERE blocker_player_username = ?";
 
         try {
             ensureConnection();
             try (PreparedStatement pstmt = connection.prepareStatement(sql)) {
-                pstmt.setString(1, blockerUUID.toString());
+                pstmt.setString(1, blockerUserName);
 
                 ResultSet rs = pstmt.executeQuery();
                 while (rs.next()) {
                     blockedByBlockerAt.put(
-                            UUID.fromString(rs.getString("blocked_player_uuid")),
+                            rs.getString("blocked_player_username"),
                             rs.getLong("created_at")
                     );
                 }
                 
-                return new BlocklistOfPlayer(blockerUUID, blockedByBlockerAt);
+                return new BlocklistOfPlayer(blockerUserName, blockedByBlockerAt);
             }
         } catch (SQLException e) {
             LOGGER.error("Failed to get player homes", e);
-            return new BlocklistOfPlayer(blockerUUID, Map.of());
+            return new BlocklistOfPlayer(blockerUserName, Map.of());
         }
     }
 
     /**
-     * Removes a home from the database.
+     * Removes a player from someone's blocklist.
      */
-    public boolean removePlayerFromBlocklist(UUID blockerPlayerUUID, UUID blockedPlayerUUID) {
-        String sql = "DELETE FROM homes WHERE blocker_player_uuid = ? AND blocked_player_uuid = ?";
+    public boolean removePlayerFromBlocklist(String blockedPlayerUserName, String blockerPlayerUserName) {
+        String sql = "DELETE FROM blocklist WHERE blocker_player_username = ? AND blocked_player_username = ?";
 
         try {
             ensureConnection();
             try (PreparedStatement pstmt = connection.prepareStatement(sql)) {
-                pstmt.setString(1, blockerPlayerUUID.toString());
-                pstmt.setString(2, blockedPlayerUUID.toString());
+                pstmt.setString(1, blockerPlayerUserName);
+                pstmt.setString(2, blockedPlayerUserName);
 
                 int affected = pstmt.executeUpdate();
-                LOGGER.debug("Removed player '{}' from blocklist of  player {} (affected rows: {})", blockedPlayerUUID, blockerPlayerUUID, affected);
+                LOGGER.debug("Removed player '{}' from blocklist of  player {} (affected rows: {})", blockedPlayerUserName, blockerPlayerUserName, affected);
                 return affected > 0;
             }
         } catch (SQLException e) {
@@ -565,22 +562,22 @@ public class DatabaseManager {
     }
 
     /**
-     * Checks if a home exists for a player.
+     * Checks if a player is blocked by another.
      */
-    public boolean isPlayerBlockedByPlayer(UUID blockerPlayerUUID, UUID blockedPlayerUUID) {
-        String sql = "SELECT COUNT(*) FROM homes WHERE blocker_player_uuid = ? AND blocked_player_uuid = ?";
+    public boolean isPlayerBlockedByPlayer(String blockedPlayerUserName, String blockerPlayerUserName) {
+        String sql = "SELECT COUNT(*) FROM blocklist WHERE blocker_player_username = ? AND blocked_player_username = ?";
 
         try {
             ensureConnection();
             try (PreparedStatement pstmt = connection.prepareStatement(sql)) {
-                pstmt.setString(1, blockerPlayerUUID.toString());
-                pstmt.setString(2, blockedPlayerUUID.toString());
+                pstmt.setString(1, blockerPlayerUserName);
+                pstmt.setString(2, blockedPlayerUserName);
 
                 ResultSet rs = pstmt.executeQuery();
                 if (rs.next()) {
-                    return rs.getInt(1) > 0;
+                   return rs.getInt(1) > 0;
                 } else {
-                    LOGGER.debug("Player '{}' is not blocked by player '{}')", blockedPlayerUUID, blockerPlayerUUID);
+                    LOGGER.debug("Player '{}' is not blocked by player '{}')", blockedPlayerUserName, blockerPlayerUserName);
                     return false;
                 }
             }

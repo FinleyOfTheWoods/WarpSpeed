@@ -14,8 +14,7 @@ import net.minecraft.text.Text;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import uk.co.finleyofthewoods.warpspeed.utils.DatabaseManager;
-import uk.co.finleyofthewoods.warpspeed.utils.tpa.TpxRequestManager;
-import uk.co.finleyofthewoods.warpspeed.utils.tpa.TpxRequestNotFoundException;
+import uk.co.finleyofthewoods.warpspeed.utils.tpa.*;
 import uk.co.finleyofthewoods.warpspeed.utils.tpa.request.impl.MultipleTargetsToPrivilegedSenderRequest;
 import uk.co.finleyofthewoods.warpspeed.utils.tpa.request.impl.SenderToSingleTargetRequest;
 import uk.co.finleyofthewoods.warpspeed.utils.tpa.request.impl.SingleTargetToPrivilegedSenderRequest;
@@ -98,6 +97,22 @@ public class TpxCommand {
                         .suggests(makeTargetSuggestions())
                         .executes(context -> executeTpaCancelRequest(context, true)))
         );
+        dispatcher.register(literal("tpblock")
+                .requires(source -> source.getPlayer() != null)
+                .then(argument("target", StringArgumentType.word())
+                        .suggests(makeTargetSuggestions())
+                        .executes(context -> executeTpBlock(context, dbManager)))
+        );
+        dispatcher.register(literal("tpunblock")
+                .requires(source -> source.getPlayer() != null)
+                .then(argument("target", StringArgumentType.word())
+                        .suggests(makeTargetSuggestions())
+                        .executes(context -> executeTpUnblock(context, dbManager)))
+        );
+        dispatcher.register(literal("tpblocklist")
+                .requires(source -> source.getPlayer() != null)
+                .executes( context -> executeTpBlocklist(context, dbManager))
+        );
         /*dispatcher.register(literal("tphere")
                 .requires(source -> source.getPlayer() != null) //todo: permission
                 .then(argument("target", StringArgumentType.word())
@@ -165,7 +180,7 @@ public class TpxCommand {
             } else {
                 return 0;
             }
-        } catch (TpxRequestNotFoundException | NoSuchElementException | CommandSyntaxException e) {
+        } catch (TpxRequestAlreadyExistsException | TpxNotAllowedException | TpxRequestNotFoundException | NoSuchElementException | CommandSyntaxException e) {
             LOGGER.debug("Request failed", e);
             Optional<ServerPlayerEntity> sender = Optional.ofNullable(context.getSource().getPlayer());
             sender.ifPresent(player -> player.sendMessage(Text.literal("§o§c An error has occured: " + e.getMessage()), false));
@@ -190,7 +205,7 @@ public class TpxCommand {
             } else {
                 return 0;
             }
-        } catch (TpxRequestNotFoundException | NoSuchElementException | CommandSyntaxException e) {
+        } catch (TpxRequestAlreadyExistsException | TpxNotAllowedException | TpxRequestNotFoundException | NoSuchElementException | CommandSyntaxException  e) {
             LOGGER.debug("Request failed", e);
             Optional<ServerPlayerEntity> sender = Optional.ofNullable(context.getSource().getPlayer());
             sender.ifPresent(player -> player.sendMessage(Text.literal("§o§c An error has occured: " + e.getMessage()), false));
@@ -330,6 +345,84 @@ public class TpxCommand {
             return 0;
         } catch (Exception e) {
             LOGGER.error("Unexpected Exception: Failed to execute /tpcancel command", e);
+            return 0;
+        }
+    }
+
+    private static int executeTpBlock(CommandContext<ServerCommandSource> context, DatabaseManager dbManager) {
+        try {
+            String targetPlayerName = StringArgumentType.getString(context, "target");
+            List<ServerPlayerEntity> foundTargetPlayer = context.getSource().getWorld().getPlayers( playerEntity -> String.valueOf(playerEntity.getName().getString()).equals(targetPlayerName));
+
+            if (foundTargetPlayer.isEmpty()) {
+                throw new TpxBlockingFailedException("Couldn't find target player");
+            }
+            ServerCommandSource source = context.getSource();
+            ServerPlayerEntity player = source.getPlayerOrThrow();
+
+            boolean success = TpxRequestManager.blockPlayerFromRequesting(player, foundTargetPlayer.getFirst(), dbManager);
+            if (success) {
+                return 1;
+            } else {
+                return 0;
+            }
+        } catch (TpxBlockingFailedException | NoSuchElementException | CommandSyntaxException e) {
+            LOGGER.debug("Blocking failed", e);
+            Optional<ServerPlayerEntity> sender = Optional.ofNullable(context.getSource().getPlayer());
+            sender.ifPresent(player -> player.sendMessage(Text.literal("§o§c An error has occured: " + e.getMessage()), false));
+            return 0;
+        } catch (Exception e) {
+            LOGGER.error("Unexpected Exception: Failed to execute /tpblock command", e);
+            return 0;
+        }
+    }
+
+    private static int executeTpUnblock(CommandContext<ServerCommandSource> context, DatabaseManager dbManager) {
+        try {
+            String targetPlayerName = StringArgumentType.getString(context, "target");
+            List<ServerPlayerEntity> foundTargetPlayer = context.getSource().getWorld().getPlayers( playerEntity -> String.valueOf(playerEntity.getName().getString()).equals(targetPlayerName));
+
+            if (foundTargetPlayer.isEmpty()) {
+                throw new TpxBlockingFailedException("Couldn't find target player");
+            }
+            ServerCommandSource source = context.getSource();
+            ServerPlayerEntity player = source.getPlayerOrThrow();
+
+            boolean success = TpxRequestManager.unblockPlayerForPlayer(foundTargetPlayer.getFirst(), player, dbManager);
+            if (success) {
+                return 1;
+            } else {
+                return 0;
+            }
+        } catch (TpxUnblockingFailedException | NoSuchElementException | CommandSyntaxException e) {
+            LOGGER.debug("Unblocking failed", e);
+            Optional<ServerPlayerEntity> sender = Optional.ofNullable(context.getSource().getPlayer());
+            sender.ifPresent(player -> player.sendMessage(Text.literal("§o§c An error has occured: " + e.getMessage()), false));
+            return 0;
+        } catch (Exception e) {
+            LOGGER.error("Unexpected Exception: Failed to execute /tpunblock command", e);
+            return 0;
+        }
+    }
+
+    private static int executeTpBlocklist(CommandContext<ServerCommandSource> context, DatabaseManager dbManager) {
+        try {
+           ServerCommandSource source = context.getSource();
+            ServerPlayerEntity player = source.getPlayerOrThrow();
+
+            boolean success = TpxRequestManager.getBlocklistOfPlayer(player, dbManager);
+            if (success) {
+                return 1;
+            } else {
+                return 0;
+            }
+        } catch ( NoSuchElementException | CommandSyntaxException e) {
+            LOGGER.debug("Getting blocklist failed", e);
+            Optional<ServerPlayerEntity> sender = Optional.ofNullable(context.getSource().getPlayer());
+            sender.ifPresent(player -> player.sendMessage(Text.literal("§o§c An error has occured: " + e.getMessage()), false));
+            return 0;
+        } catch (Exception e) {
+            LOGGER.error("Unexpected Exception: Failed to execute /tpblocklist command", e);
             return 0;
         }
     }

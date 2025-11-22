@@ -1,27 +1,25 @@
 package uk.co.finleyofthewoods.warpspeed.utils;
 
-import net.minecraft.util.math.BlockPos;
+import org.jetbrains.annotations.NotNull;
 
 import java.util.List;
 import java.util.Map;
-import java.util.UUID;
 
-public record BlocklistOfPlayer(UUID blockerPlayerUUID, Map<UUID, Long> blockedByBlockerAt) {
+public record BlocklistOfPlayer(String blockerPlayerUserName, Map<String, Long> blockedByBlockerAt) {
 
-    public UUID getBlocker() {
-        return blockerPlayerUUID;
+    public String getBlocker() {
+        return blockerPlayerUserName;
     }
 
-    public Map<UUID, Long> getBlockedByPlayer() {
+    public Map<String, Long> getBlockedByPlayer() {
         return blockedByBlockerAt;
     }
 
     @Override
-    public String toString() {
+    public @NotNull String toString() {
         StringBuilder sb = new StringBuilder();
-        sb.append("BlocklistOfPlayer{player=").append(blockerPlayerUUID).append(", isBlocking=[");
+        sb.append("BlocklistOfPlayer{player=").append(blockerPlayerUserName).append(", isBlocking=[");
         List<String> blockedPlayers = blockedByBlockerAt.keySet().stream()
-                .map(UUID::toString)
                 .toList();
         sb.append(String.join(", ", blockedPlayers));
         sb.append("]}");
@@ -31,9 +29,9 @@ public record BlocklistOfPlayer(UUID blockerPlayerUUID, Map<UUID, Long> blockedB
     //build a json of this
     public String toJson() {
         StringBuilder sb = new StringBuilder();
-        sb.append("{\"player\": \"").append(blockerPlayerUUID.toString()).append("\", \"isBlocking\": [");
+        sb.append("{\"player\": \"").append(blockerPlayerUserName).append("\", \"isBlocking\": [");
         List<String> blockedPlayers = blockedByBlockerAt.keySet().stream()
-                .map(uuid -> "\"" + uuid.toString() + "\"")
+                .map(username -> "\"" + username + "\"")
                 .toList();
         sb.append(String.join(", ", blockedPlayers));
         sb.append("]}");

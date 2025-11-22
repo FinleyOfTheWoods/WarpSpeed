@@ -1,7 +1,6 @@
 package uk.co.finleyofthewoods.warpspeed.utils.tpa;
 
 import java.util.List;
-import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
@@ -97,7 +96,7 @@ public class TpxRequestManager {
         if (alreadySentTeleportRequest(request.getClass(), request.getSender(), request.getReceivers())) {
             throw new TpxRequestAlreadyExistsException("You have already sent  a request to that player!");
         }
-        if (isSenderBlockedByTarget(request.getSender(), request.getReceivers().getFirst(), databaseManager)){
+        if (isPlayerBlockedByPlayer(request.getSender(), request.getReceivers().getFirst(), databaseManager)){
             throw new TpxNotAllowedException("This player can't be sent teleport requests at this moment.");
         }
         requestSet.add(request);
@@ -114,7 +113,7 @@ public class TpxRequestManager {
         if (alreadySentTeleportRequest(request.getClass(), request.getSender(), request.getReceivers())) {
             throw new TpxRequestAlreadyExistsException("You have already sent a request to that player!");
         }
-        if (isSenderBlockedByTarget(request.getSender(), request.getReceivers().getFirst(), databaseManager)){
+        if (isPlayerBlockedByPlayer(request.getSender(), request.getReceivers().getFirst(), databaseManager)){
             throw new TpxNotAllowedException("This player can't be sent teleport requests at this moment.");
         }
         requestSet.add(request);
@@ -188,46 +187,48 @@ public class TpxRequestManager {
         }
     }
 
-    public static boolean blockPlayerFromRequesting(ServerPlayerEntity sender, ServerPlayerEntity receiver, DatabaseManager databaseManager){
-        if (sender.getUuid().equals(receiver.getUuid())){
+    public static boolean blockPlayerFromRequesting(ServerPlayerEntity blockingPlayer, ServerPlayerEntity blockedPlayer, DatabaseManager databaseManager){
+        if (blockingPlayer.getUuid().equals(blockedPlayer.getUuid())){
             throw new TpxBlockingFailedException("You can't block yourself.");
         }
-        if (!databaseManager.isPlayerBlockedByPlayer(sender.getUuid(), receiver.getUuid())){
-            databaseManager.addPlayerToBlockList(sender.getUuid(), receiver.getUuid());
-            sender.sendMessage(Text.literal("§o§6You have blocked " + receiver.getName().getString() + " from sending you teleport requests."), false);
+        if (!databaseManager.isPlayerBlockedByPlayer(blockedPlayer.getName().getString(), blockingPlayer.getName().getString())){
+            if(!databaseManager.addPlayerToBlockList(blockedPlayer.getName().getString(), blockingPlayer.getName().getString()))
+                throw new TpxBlockingFailedException("Blocking has failed");
+            blockingPlayer.sendMessage(Text.literal("§o§6You have blocked " + blockedPlayer.getName().getString() + " from sending you teleport requests."), false);
             return true;
         } else {
-            throw new TpxBlockingFailedException("Failed to block player from requesting.");
+            throw new TpxBlockingFailedException("Failed to block player. You might have already blocked them.");
         }
     }
 
-    public static boolean unblockPlayerForPlayer(ServerPlayerEntity sender, ServerPlayerEntity receiver, DatabaseManager databaseManager){
-        if (sender.getUuid().equals(receiver.getUuid())){
+    public static boolean unblockPlayerForPlayer(ServerPlayerEntity blockedPlayer, ServerPlayerEntity blockingPlayer, DatabaseManager databaseManager){
+        if (blockedPlayer.getUuid().equals(blockingPlayer.getUuid())){
             throw new TpxUnblockingFailedException("You can't unblock yourself.");
         }
-        if (databaseManager.isPlayerBlockedByPlayer(sender.getUuid(), receiver.getUuid())){
-            databaseManager.removePlayerFromBlocklist(sender.getUuid(), receiver.getUuid());
-            sender.sendMessage(Text.literal("§o§6You have unblocked " + receiver.getName().getString() + ". They can send you teleport requests again."), false);
+        if (databaseManager.isPlayerBlockedByPlayer(blockedPlayer.getName().getString(), blockingPlayer.getName().getString())){
+            blockingPlayer.sendMessage(Text.literal("§o§6You have unblocked " + blockingPlayer.getName().getString() + ". They can send you teleport requests again."), false);
+            if (!databaseManager.removePlayerFromBlocklist(blockedPlayer.getName().getString(), blockingPlayer.getName().getString()))
+                throw new TpxUnblockingFailedException("Unblocking has failed");
             return true;
         } else {
             throw new TpxUnblockingFailedException("Failed to unblock player from requesting.");
         }
     }
 
-    public static boolean getBlocklistOfPlayer(ServerPlayerEntity sender, DatabaseManager databaseManager){
-        BlocklistOfPlayer blockedPlayers = databaseManager.getBlocklistForPlayer(sender.getUuid());
+    public static boolean getBlocklistOfPlayer(ServerPlayerEntity blockingPlayer, DatabaseManager databaseManager){
+        BlocklistOfPlayer blockedPlayers = databaseManager.getBlocklistForPlayer(blockingPlayer.getName().getString());
         if (blockedPlayers.getBlockedByPlayer().isEmpty()){
-            sender.sendMessage(Text.literal("§o§6(empty)"), false);
+            blockingPlayer.sendMessage(Text.literal("§o§6(empty)"), false);
         } else {
-            sender.sendMessage(Text.literal("§o§6Players blocked from sending you teleport requests:"), false);
-            sender.sendMessage(Text.literal("§o§6" + blockedPlayers.getBlockedByPlayer()), false);
+            blockingPlayer.sendMessage(Text.literal("§o§6Players blocked from sending you teleport requests:"), false);
+            blockingPlayer.sendMessage(Text.literal("§o§6" + blockedPlayers.getBlockedByPlayer()), false);
 
         }
         return true;
     }
 
-    public static boolean isSenderBlockedByTarget(ServerPlayerEntity sender, ServerPlayerEntity target, DatabaseManager databaseManager){
-        return databaseManager.isPlayerBlockedByPlayer(sender.getUuid(), target.getUuid());
+    public static boolean isPlayerBlockedByPlayer(ServerPlayerEntity blockedPlayer, ServerPlayerEntity blockingPlayer, DatabaseManager databaseManager){
+        return databaseManager.isPlayerBlockedByPlayer(blockedPlayer.getName().getString(), blockingPlayer.getName().getString());
     }
 
 
