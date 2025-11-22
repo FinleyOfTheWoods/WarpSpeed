@@ -40,16 +40,8 @@ public class Warpspeed implements ModInitializer {
             BackCommand.register(dispatcher);
             /// Handle /warp command and teleport the player to the warp location.
             WarpCommand.register(dispatcher, dbManager);
-            /// Handle /tpa command and request a teleport from sender to receiver.
+            /// Handle all teleport related commands.
             TpxCommand.register(dispatcher, dbManager);
-            /// Handle /tpahere command and request a teleport from receiver to sender.
-            /// Handle /tpaaccept command and accept a teleport from sender to receiver.
-            /// Handle /tpadeny command and deny a teleport from sender to receiver.
-            /// Handle /tpacancel command and cancel a teleport that sender has made.
-            /// Handle /tpblock command and block the target from making requests to sender, with db manager
-            /// Handle /tpunblock command and allow target to make requests to sender again, with db manager
-            /// Handle /tphere command and teleport the receiver to sender without approval (needs elevated perms).
-            /// Handle /tpAllhere command and teleport all players to sender without approval (needs elevated perms).
         }));
     }
     public static DatabaseManager getDatabaseManager() {
