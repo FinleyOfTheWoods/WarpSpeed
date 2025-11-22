@@ -1,11 +1,9 @@
 package uk.co.finleyofthewoods.warpspeed.utils;
 
 import net.minecraft.block.BlockState;
-import net.minecraft.block.entity.BlockEntity;
 import net.minecraft.server.network.ServerPlayerEntity;
 import net.minecraft.text.Text;
 import net.minecraft.util.math.BlockPos;
-import net.minecraft.world.Heightmap;
 import net.minecraft.world.World;
 import net.minecraft.world.border.WorldBorder;
 import uk.co.finleyofthewoods.warpspeed.config.ConfigManager;

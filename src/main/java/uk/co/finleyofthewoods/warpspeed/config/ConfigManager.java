@@ -8,7 +8,6 @@ import org.slf4j.LoggerFactory;
 import java.io.File;
 import java.io.FileReader;
 import java.io.FileWriter;
-import java.io.IOException;
 
 public class ConfigManager {
     private final static Logger LOGGER = LoggerFactory.getLogger(ConfigManager.class);
