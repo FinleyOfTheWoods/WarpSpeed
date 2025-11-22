@@ -154,7 +154,10 @@ For more information, see the [MPL 2.0 FAQ](https://www.mozilla.org/en-US/MPL/2.
 
 ## 👤 Credits
 
-Developed by finleyofthewoods
+Developed by [finleyofthewoods](https://github.com/FinleyOfTheWoods)
+
+Contributors:
+- [catinbetween](https://github.com/catinbetween)
 
 Built with:
 - [Fabric](https://fabricmc.net/) - Mod loader
