@@ -3,7 +3,7 @@ package uk.co.finleyofthewoods.warpspeed.config;
 public class Config {
     private int maxPlayerHomes = 10;
     private int maxPlayerWarps = 254;
-    private int rtpCooldown = 30;
+    private int tpCooldown = 10;
 
     public int getPlayerHomeLimit() {
         return maxPlayerHomes;
@@ -21,11 +21,11 @@ public class Config {
         maxPlayerWarps = limit;
     }
 
-    public int getRtpCooldown() {
-        return rtpCooldown;
+    public int getTPCooldown() {
+        return tpCooldown;
     }
 
-    public void setRtpCooldown(int cooldown) {
-        rtpCooldown = cooldown;
+    public void setTPCooldown(int cooldown) {
+        tpCooldown = cooldown;
     }
 }

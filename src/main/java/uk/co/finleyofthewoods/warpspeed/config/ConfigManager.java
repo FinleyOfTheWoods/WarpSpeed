@@ -25,12 +25,15 @@ public class ConfigManager {
     private static void load() {
         if (CONFIG_FILE.exists()) {
             try (FileReader reader = new FileReader(CONFIG_FILE)) {
+                LOGGER.error("Loading config from file");
                 INSTANCE = GSON.fromJson(reader, Config.class);
             } catch (Exception e) {
+                LOGGER.error("Failed to load config from file", e);
                 INSTANCE = new Config();
                 save();
             }
         } else {
+            LOGGER.error("Config file does not exist, creating new one");
             INSTANCE = new Config();
             save();
         }
@@ -38,6 +41,7 @@ public class ConfigManager {
 
     private static void save() {
         try {
+            LOGGER.error("Saving config to file");
             try (FileWriter writer = new FileWriter(CONFIG_FILE)) {
                 GSON.toJson(INSTANCE, writer);
             }
@@ -66,5 +70,4 @@ public class ConfigManager {
             throw new RuntimeException("Unexpected error whilst saving config");
         }
     }
-
 }

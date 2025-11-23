@@ -1,5 +1,6 @@
 package uk.co.finleyofthewoods.warpspeed.utils;
 
+import net.fabricmc.loader.api.FabricLoader;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import uk.co.finleyofthewoods.warpspeed.infrastructure.BlocklistOfPlayer;
@@ -12,13 +13,12 @@ import java.util.*;
 
 public class DatabaseManager {
     private static final Logger LOGGER = LoggerFactory.getLogger(DatabaseManager.class);
-    private static final String DB_FILE = "config/warpspeed/warp_points.db";
+    private static final File DB_FILE = FabricLoader.getInstance().getConfigDir().resolve("warpspeed/warp_points.db").toFile();
     private Connection connection;
 
     public void initialise() {
         try {
-            File dbFile = new File(DB_FILE);
-            File parentDir = dbFile.getParentFile();
+            File parentDir = DB_FILE.getParentFile();
             if (parentDir != null && !parentDir.exists()) {
                 parentDir.mkdirs();
                 LOGGER.info("Created database directory {}", parentDir.getAbsolutePath());

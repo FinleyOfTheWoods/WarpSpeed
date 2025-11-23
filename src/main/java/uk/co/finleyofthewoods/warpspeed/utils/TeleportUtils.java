@@ -20,15 +20,26 @@ import net.minecraft.world.TeleportTarget;
 import net.minecraft.world.World;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import uk.co.finleyofthewoods.warpspeed.config.ConfigManager;
 import uk.co.finleyofthewoods.warpspeed.infrastructure.HomePosition;
 import uk.co.finleyofthewoods.warpspeed.infrastructure.WarpPosition;
 import uk.co.finleyofthewoods.warpspeed.infrastructure.exceptions.NoSafeLocationFoundException;
 
+import java.util.HashMap;
+import java.util.Map;
+import java.util.UUID;
+
 
 public class TeleportUtils {
     private static final Logger LOGGER = LoggerFactory.getLogger(TeleportUtils.class);
+    private static final int TP_REQUEST_COOLDOWN = ConfigManager.get().getTPCooldown();
+    private static final Map<UUID, Integer> tpCooldowns = new HashMap<>();
+
 
     public static boolean teleportToSpawn(ServerPlayerEntity player, World world, BlockPos spawnPos) {
+        if (isTeleportOnCooldown(player)) {
+            return false;
+        }
         try {
             LOGGER.debug("Attempting to teleport player {} to spawn at ({}, {}, {})",
                     player.getName().toString(),
@@ -44,6 +55,9 @@ public class TeleportUtils {
     }
 
     public static boolean teleportToHome(ServerPlayerEntity player, String homeName, DatabaseManager dbManager) {
+        if (isTeleportOnCooldown(player)) {
+            return false;
+        }
         try {
             HomePosition home = dbManager.getHome(player.getUuid(), homeName);
             if (home == null) {
@@ -71,6 +85,9 @@ public class TeleportUtils {
     }
 
     public static boolean teleportToLastLocation(ServerPlayerEntity player) {
+        if (isTeleportOnCooldown(player)) {
+            return false;
+        }
         try {
             if (!PlayerLocationTracker.hasPreviousLocation(player)) {
                 LOGGER.debug("Failed to teleport {} to last location: no previous location found", player.getName().toString());
@@ -97,6 +114,9 @@ public class TeleportUtils {
     }
 
     public static boolean teleportToWarp(ServerPlayerEntity player, String warpName, DatabaseManager dbManager) {
+        if (isTeleportOnCooldown(player)) {
+            return false;
+        }
         try {
             WarpPosition warp = dbManager.getWarp(warpName);
             if (warp == null) {
@@ -129,6 +149,9 @@ public class TeleportUtils {
     }
 
     public static boolean teleportPlayerToPlayer(ServerPlayerEntity playerToTeleport, ServerPlayerEntity targetPlayer) {
+        if (isTeleportOnCooldown(playerToTeleport)) {
+            return false;
+        }
         try {
             World targetWorld = targetPlayer.getEntityWorld();
             BlockPos targetPos = targetPlayer.getBlockPos();
@@ -148,17 +171,13 @@ public class TeleportUtils {
     }
 
     public static boolean teleportToRandomLocation(ServerPlayerEntity player, World world) {
-        int cooldown = RTPRequestManager.hasRtpRequestCooldownExpired(player);
-        if (cooldown > 0) {
-            LOGGER.debug("Player {} has a pending RTP request, not teleporting", player.getName().toString());
-            player.sendMessage(Text.literal("§c§oRTP recently used. Please wait " + cooldown + " seconds."), true);
+        if (isTeleportOnCooldown(player)) {
             return false;
         }
         BlockPos pos = RTPRequestManager.requestRTP(player, world);
         try {
             BlockPos safePos = findSafeLocation(world, pos);
             if (teleportPlayer(player, world, safePos)) {
-                RTPRequestManager.setRtpCooldown(player);
                 return true;
             } else {
                 player.sendMessage(Text.literal("Failed to find a suitable RTP location."), false);
@@ -356,6 +375,7 @@ public class TeleportUtils {
                 // Spawn arrival particles and sound at destination
                 spawnTeleportEffects(targetServerWorld, new Vec3d(x, y, z), false);
                 player.sendMessage(Text.literal("§aTeleportation successful!"), false);
+                setTPCooldown(player);
             } else {
                 player.sendMessage(Text.literal("§cTeleportation failed: Unable to complete teleport"), false);
                 LOGGER.warn("Teleport returned false for player {} at ({}, {}, {})",
@@ -485,4 +505,27 @@ public class TeleportUtils {
         ServerWorld targetWorld = server.getWorld(worldKey);
         return targetWorld;
     }
+
+    private static boolean isTeleportOnCooldown(ServerPlayerEntity player) {
+        int timeRemaining = hasTPRequestCooldownExpired(player);
+        if (timeRemaining > 0) {
+            player.sendMessage(Text.literal("You must wait " + timeRemaining + " seconds before teleporting again"), true);
+            return true;
+        }
+        return false;
+    }
+
+    private static int hasTPRequestCooldownExpired(ServerPlayerEntity player) {
+        if (tpCooldowns.containsKey(player.getUuid())) {
+            int timestamp = (int) (System.currentTimeMillis() / 1000);
+            int timeSinceLastRequest = timestamp - tpCooldowns.get(player.getUuid());
+            return TP_REQUEST_COOLDOWN - timeSinceLastRequest;
+        }
+        return 0;
+    }
+
+    private static void setTPCooldown(ServerPlayerEntity player) {
+        tpCooldowns.put(player.getUuid(), (int) (System.currentTimeMillis() / 1000));
+    }
+
 }
