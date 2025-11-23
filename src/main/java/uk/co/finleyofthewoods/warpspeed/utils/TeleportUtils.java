@@ -348,7 +348,7 @@ public class TeleportUtils {
         PlayerLocationTracker.storeCurrentLocation(player);
 
         double x = pos.getX() + 0.5;
-        double y = pos.getY();
+        double y = pos.getY() + 1;
         double z = pos.getZ() + 0.5;
 
         // Check if cross-dimension teleport is needed
@@ -363,7 +363,6 @@ public class TeleportUtils {
         spawnTeleportEffects(currentWorld, currentPos, true);
 
         try {
-
             // Cross-dimension teleport
             LOGGER.debug("Cross-dimension teleport from {} to {} for player {}",
                     currentWorld.getRegistryKey().getValue(),
@@ -396,7 +395,6 @@ public class TeleportUtils {
             }
 
             return teleported;
-
         } catch (Exception e) {
             player.sendMessage(Text.literal("§cTeleportation failed: " + e.getMessage()), false);
             LOGGER.error("Exception during teleport for player {} to ({}, {}, {}): {}",
