@@ -8,6 +8,8 @@ import net.minecraft.util.math.BlockPos;
 import net.minecraft.world.World;
 import net.minecraft.world.biome.Biome;
 import net.minecraft.world.border.WorldBorder;
+import net.minecraft.world.dimension.DimensionType;
+import net.minecraft.world.dimension.DimensionTypes;
 
 import java.util.*;
 
@@ -35,8 +37,6 @@ public class RTPRequestManager {
             player.sendMessage(Text.literal("Failed to find a safe location to teleport to."), false);
             return null;
         }
-        player.sendMessage(Text.literal("Teleporting to new location... " + pos.toShortString()), false);
-
         return pos.up();
     }
 
@@ -49,9 +49,7 @@ public class RTPRequestManager {
 
         double radius = (size / 2) - 16;
 
-        boolean posFound = false;
-
-        for (int tries = 0; tries < 30 && !posFound; tries++) {
+        for (int tries = 0; tries < 30; tries++) {
             double xOffset = (RANDOM.nextDouble() * 2 - 1) * radius;
             double zOffset = (RANDOM.nextDouble() * 2 - 1) * radius;
             int x = (int) (centerX + xOffset);
@@ -73,7 +71,9 @@ public class RTPRequestManager {
                         airGapsFound++;
                     }
                     if (airGapsFound > 5 && !state.isAir()) {
-                        break;
+                        if (state.isSolidBlock(world, pos)) {
+                            break;
+                        }
                     }
                 }
                 return pos;

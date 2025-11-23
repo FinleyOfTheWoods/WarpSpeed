@@ -28,15 +28,12 @@ public class BackCommand {
             }
             ServerPlayerEntity player = source.getPlayerOrThrow();
             if (!PlayerLocationTracker.hasPreviousLocation(player)) {
-                player.sendMessage(Text.literal("No previous location found"), false);
                 return 0;
             }
             boolean success = TeleportUtils.teleportToLastLocation(player);
             if (success) {
-                player.sendMessage(Text.literal("Teleported to previous location"), false);
                 return 1;
             } else {
-                player.sendMessage(Text.literal("Failed to teleport to previous location"), false);
                 return 0;
             }
         } catch (Exception e) {

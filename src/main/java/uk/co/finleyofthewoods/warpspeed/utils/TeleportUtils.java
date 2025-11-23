@@ -80,7 +80,6 @@ public class TeleportUtils {
             }
             HomePosition home = dbManager.getHome(player.getUuid(), homeName);
             if (home == null) {
-                player.sendMessage(Text.literal("§cFailed to find home: " + homeName), false);
                 LOGGER.warn("Failed to find home for player {}: {}", player.getName().toString(), homeName);
                 return false;
             }
@@ -110,7 +109,7 @@ public class TeleportUtils {
         try {
             if (!PlayerLocationTracker.hasPreviousLocation(player)) {
                 LOGGER.debug("Failed to teleport {} to last location: no previous location found", player.getName().toString());
-                player.sendMessage(Text.literal("§cFailed to teleport: no previous location found"), false);
+                player.sendMessage(Text.literal("§cNo previous location found"), true);
                 return false;
             }
             PlayerLocationTracker.PlayerLocation location = PlayerLocationTracker.getPreviousLocation(player);
@@ -140,12 +139,12 @@ public class TeleportUtils {
             WarpPosition warp = dbManager.getWarp(warpName);
             if (warp == null) {
                 LOGGER.warn("Failed to find warp for player {}: {}", player.getName().toString(), warpName);
-                player.sendMessage(Text.literal("§cFailed to find warp: " + warpName + " does not exist."), false);
+                player.sendMessage(Text.literal("§cFailed to find warp: " + warpName + " does not exist."), true);
                 return false;
             }
             if (warp.isPrivate() && !warp.playerUUID().equals(player.getUuid())) {
                 LOGGER.warn("Failed to teleport {} to warp {}: warp is private and not owned by player", player.getName().toString(), warpName);
-                player.sendMessage(Text.literal("§cTeleportation failed. Warp is private and not owned by you."), false);
+                player.sendMessage(Text.literal("§cTeleportation failed. Warp is private and not owned by you."), true);
                 return false;
             }
             BlockPos warpPos = warp.getBlockPos();
@@ -155,7 +154,7 @@ public class TeleportUtils {
             ServerWorld targetWorld = getTargetWorld(player, warp.worldId());
             if (targetWorld == null) {
                 LOGGER.warn("Failed to find world {} for warp {}", warp.worldId(), warpName);
-                player.sendMessage(Text.literal("§cFailed to teleport: warp world not found"), false);
+                player.sendMessage(Text.literal("§cFailed to teleport: warp world not found"), true);
                 return false;
             }
 
@@ -199,7 +198,7 @@ public class TeleportUtils {
             if (teleportPlayer(player, world, safePos)) {
                 return true;
             } else {
-                player.sendMessage(Text.literal("Failed to find a suitable RTP location."), false);
+                player.sendMessage(Text.literal("Failed to find a suitable RTP location."), true);
                 return false;
             }
         } catch (Exception e) {
@@ -391,16 +390,14 @@ public class TeleportUtils {
                 player.sendMessage(Text.literal("§aTeleportation successful!"), true);
                 setTPCooldown(player);
             } else {
-                player.sendMessage(Text.literal("§cTeleportation failed: Unable to complete teleport"), false);
+                player.sendMessage(Text.literal("§cTeleportation failed: Unable to complete teleport"), true);
                 LOGGER.warn("Teleport returned false for player {} at ({}, {}, {})",
                         player.getName().getString(), x, y, z);
             }
 
             return teleported;
         } catch (Exception e) {
-            player.sendMessage(Text.literal("§cTeleportation failed: " + e.getMessage()), false);
-            LOGGER.error("Exception during teleport for player {} to ({}, {}, {}): {}",
-                    player.getName().getString(), x, y, z, e.getMessage(), e);
+            handleException(e, "Failed to teleport.", player);
             return false;
         }
     }

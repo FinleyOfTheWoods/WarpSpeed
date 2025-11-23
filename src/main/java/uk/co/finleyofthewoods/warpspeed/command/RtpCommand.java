@@ -30,7 +30,6 @@ public class RtpCommand {
             World world = source.getWorld();
             boolean success = TeleportUtils.teleportToRandomLocation(player, world);
             if (success) {
-                player.sendMessage(Text.literal("Teleported to a random location!"), false);
                 return 1;
             } else {
                 return 0;
