@@ -12,6 +12,7 @@ import net.minecraft.server.network.ServerPlayerEntity;
 import net.minecraft.text.Text;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.world.World;
+import net.minecraft.world.WorldProperties;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import uk.co.finleyofthewoods.warpspeed.config.ConfigManager;
@@ -19,7 +20,9 @@ import uk.co.finleyofthewoods.warpspeed.utils.DatabaseManager;
 import uk.co.finleyofthewoods.warpspeed.infrastructure.HomePosition;
 import uk.co.finleyofthewoods.warpspeed.utils.TeleportUtils;
 
+import java.util.ArrayList;
 import java.util.List;
+import java.util.Objects;
 import java.util.concurrent.CompletableFuture;
 
 import static net.minecraft.server.command.CommandManager.argument;
@@ -33,7 +36,15 @@ public class HomeCommand {
         return (context, builder) -> {
             try {
                 ServerPlayerEntity player = context.getSource().getPlayerOrThrow();
-                List<HomePosition> homeNames = dbManager.getPlayerHomes(player.getUuid());
+                HomePosition bed = new HomePosition(
+                        player.getUuid(),
+                        "bed",
+                        player.getEntityWorld().getRegistryKey().getValue().toString(),
+                        0, 0, 0);
+                List<HomePosition> homeNames = new ArrayList<>() {{
+                    add(bed);
+                }};
+                homeNames.addAll(dbManager.getPlayerHomes(player.getUuid()));
                 List<String> homeNamesList = homeNames.stream().map(HomePosition::homeName).toList();
                 return suggestMatching(homeNamesList, builder);
             } catch (CommandSyntaxException e) {
@@ -96,7 +107,6 @@ public class HomeCommand {
             ServerCommandSource source = context.getSource();
             ServerPlayerEntity player = source.getPlayerOrThrow();
             String homeName = StringArgumentType.getString(context, "homeName");
-            World world = player.getEntityWorld();
 
             if (homeName.length() > 32 || !homeName.matches("[a-zA-Z0-9_-]+")) {
                 player.sendMessage(Text.literal("Home name must be 1-32 alphanumeric characters"), false);
@@ -105,7 +115,7 @@ public class HomeCommand {
 
             boolean success = TeleportUtils.teleportToHome(player, homeName, dbManager);
             if (success) {
-                player.sendMessage(Text.literal("Teleported to home: " + homeName), false);
+                player.sendMessage(Text.literal("Teleported to home: " + homeName), true);
                 return 1;
             } else {
                 player.sendMessage(Text.literal("Failed to teleport to home: " + homeName), false);
@@ -125,6 +135,11 @@ public class HomeCommand {
             ServerCommandSource source = context.getSource();
             ServerPlayerEntity player = source.getPlayerOrThrow();
             String homeName = StringArgumentType.getString(context, "homeName");
+
+            if (Objects.equals(homeName, "bed")) {
+                player.sendMessage(Text.literal("You can't set a home named 'bed'."), false);
+                return 0;
+            }
 
             // check if a home already exists with this name
             boolean homeExists = dbManager.homeExists(player.getUuid(), homeName);
@@ -165,6 +180,11 @@ public class HomeCommand {
             ServerPlayerEntity player = source.getPlayerOrThrow();
             String homeName = StringArgumentType.getString(context, "homeName");
 
+            if (Objects.equals(homeName, "bed")) {
+                player.sendMessage(Text.literal("You can't delete default 'bed' home."), false);
+                return 0;
+            }
+
             boolean success = dbManager.removeHome(player.getUuid(), homeName);
 
             if (success) {
@@ -189,7 +209,7 @@ public class HomeCommand {
             ServerPlayerEntity player = source.getPlayerOrThrow();
             List<HomePosition> homes = dbManager.getPlayerHomes(player.getUuid());
             if (homes.isEmpty()) {
-                player.sendMessage(Text.literal("You have no homes set"), false);
+                player.sendMessage(Text.literal("You have no custom homes set"), false);
                 return 0;
             }
 

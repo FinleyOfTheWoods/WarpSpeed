@@ -2,6 +2,7 @@ package uk.co.finleyofthewoods.warpspeed.utils;
 
 import net.minecraft.block.BlockState;
 import net.minecraft.block.Blocks;
+import net.minecraft.block.entity.BlockEntity;
 import net.minecraft.fluid.Fluids;
 import net.minecraft.particle.ParticleTypes;
 import net.minecraft.registry.RegistryKey;
@@ -25,9 +26,7 @@ import uk.co.finleyofthewoods.warpspeed.infrastructure.HomePosition;
 import uk.co.finleyofthewoods.warpspeed.infrastructure.WarpPosition;
 import uk.co.finleyofthewoods.warpspeed.infrastructure.exceptions.NoSafeLocationFoundException;
 
-import java.util.HashMap;
-import java.util.Map;
-import java.util.UUID;
+import java.util.*;
 
 
 public class TeleportUtils {
@@ -59,6 +58,26 @@ public class TeleportUtils {
             return false;
         }
         try {
+            if (Objects.equals(homeName, "bed")) {
+                ServerPlayerEntity.Respawn respawn = player.getRespawn();
+                if (respawn == null) {
+                    player.sendMessage(Text.literal("No bed position set"), false);
+                    return false;
+                }
+                BlockPos playerBedPos = respawn.respawnData().getPos();
+
+                BlockEntity bedBlockEntity = player.getEntityWorld().getBlockEntity(playerBedPos);
+                if (bedBlockEntity == null || bedBlockEntity.isRemoved()) {
+                    player.sendMessage(Text.literal("No bed position set"), false);
+                    return false;
+                }
+
+                LOGGER.debug("Attempting to teleport {} to bed spawn at ({}, {}, {})",
+                        player.getName().toString(), playerBedPos.getX(), playerBedPos.getY(), playerBedPos.getZ());
+                BlockPos safeLoc = findSafeLocation(player.getEntityWorld(), playerBedPos);
+                teleportPlayer(player, player.getEntityWorld(), safeLoc);
+                return true;
+            }
             HomePosition home = dbManager.getHome(player.getUuid(), homeName);
             if (home == null) {
                 player.sendMessage(Text.literal("§cFailed to find home: " + homeName), false);
@@ -160,9 +179,9 @@ public class TeleportUtils {
                     targetPos.getX(),
                     targetPos.getY(),
                     targetPos.getZ());
-            playerToTeleport.sendMessage(Text.literal("§6§oFinding a safe location near " + targetPlayer.getName().getString()),false);
+            playerToTeleport.sendMessage(Text.literal("§6§oFinding a safe location near " + targetPlayer.getName().getString()),true);
             BlockPos safeLoc = findSafeLocation(targetWorld, targetPos);
-            playerToTeleport.sendMessage(Text.literal("§6§oDone. Teleporting now."),false);
+            playerToTeleport.sendMessage(Text.literal("§6§oDone. Teleporting now."),true);
             return teleportPlayer(playerToTeleport, targetWorld, safeLoc);
         } catch (Exception e) {
             handleException(e, "§c§oFailed to teleport player", playerToTeleport);
@@ -217,7 +236,7 @@ public class TeleportUtils {
                 }
             }
         }
-        LOGGER.warn("Failed to find safe location within search radius of ({}, {}, {})", spawnPos.getX(), spawnPos.getY(), spawnPos.getZ());
+        LOGGER.debug("Failed to find safe location within search radius of ({}, {}, {})", spawnPos.getX(), spawnPos.getY(), spawnPos.getZ());
         throw new NoSafeLocationFoundException("Failed to find safe location");
     }
 
@@ -374,7 +393,7 @@ public class TeleportUtils {
             if (teleported) {
                 // Spawn arrival particles and sound at destination
                 spawnTeleportEffects(targetServerWorld, new Vec3d(x, y, z), false);
-                player.sendMessage(Text.literal("§aTeleportation successful!"), false);
+                player.sendMessage(Text.literal("§aTeleportation successful!"), true);
                 setTPCooldown(player);
             } else {
                 player.sendMessage(Text.literal("§cTeleportation failed: Unable to complete teleport"), false);
@@ -509,7 +528,7 @@ public class TeleportUtils {
     private static boolean isTeleportOnCooldown(ServerPlayerEntity player) {
         int timeRemaining = hasTPRequestCooldownExpired(player);
         if (timeRemaining > 0) {
-            player.sendMessage(Text.literal("You must wait " + timeRemaining + " seconds before teleporting again"), true);
+            player.sendMessage(Text.literal("§cYou must wait " + timeRemaining + " seconds before teleporting again"), true);
             return true;
         }
         return false;
