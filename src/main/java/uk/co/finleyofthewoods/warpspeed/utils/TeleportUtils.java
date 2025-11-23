@@ -226,7 +226,7 @@ public class TeleportUtils {
                             continue; // Skip, this position was checked in a previous iteration
                         }
 
-                        BlockPos pos = spawnPos.add(dx, dy, dz);
+                        BlockPos pos = spawnPos.add(dx, dy, dz).up();
                         if (isSafeLocation(world, pos)) {
                             LOGGER.debug("Found safe location at distance {} with offset ({}, {}, {}) from location",
                                     radius, dx, dy, dz);
