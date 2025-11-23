@@ -10,6 +10,7 @@ import net.minecraft.world.biome.Biome;
 import net.minecraft.world.border.WorldBorder;
 import net.minecraft.world.dimension.DimensionType;
 import net.minecraft.world.dimension.DimensionTypes;
+import uk.co.finleyofthewoods.warpspeed.config.ConfigManager;
 
 import java.util.*;
 
@@ -49,7 +50,7 @@ public class RTPRequestManager {
 
         double radius = (size / 2) - 16;
 
-        for (int tries = 0; tries < 30; tries++) {
+        for (int tries = 0; tries < ConfigManager.get().getMaxAttempts(); tries++) {
             double xOffset = (RANDOM.nextDouble() * 2 - 1) * radius;
             double zOffset = (RANDOM.nextDouble() * 2 - 1) * radius;
             int x = (int) (centerX + xOffset);
