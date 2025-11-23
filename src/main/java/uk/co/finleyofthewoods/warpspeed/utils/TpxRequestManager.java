@@ -187,27 +187,27 @@ public class TpxRequestManager {
         }
     }
 
-    public static boolean blockPlayerFromRequesting(ServerPlayerEntity blockingPlayer, ServerPlayerEntity blockedPlayer, DatabaseManager databaseManager){
-        if (blockingPlayer.getUuid().equals(blockedPlayer.getUuid())){
+    public static boolean blockPlayerForPlayer(ServerPlayerEntity blockingPlayer, String blockedPlayerName, DatabaseManager databaseManager){
+        if (blockingPlayer.getName().getString().equals(blockedPlayerName)){
             throw new TpxBlockingFailedException("You can't block yourself.");
         }
-        if (!databaseManager.isPlayerBlockedByPlayer(blockedPlayer.getName().getString(), blockingPlayer.getName().getString())){
-            if(!databaseManager.addPlayerToBlockList(blockedPlayer.getName().getString(), blockingPlayer.getName().getString()))
+        if (!databaseManager.isPlayerBlockedByPlayer(blockedPlayerName, blockingPlayer.getName().getString())){
+            if(!databaseManager.addPlayerToBlockList(blockedPlayerName, blockingPlayer.getName().getString()))
                 throw new TpxBlockingFailedException("Blocking has failed");
-            blockingPlayer.sendMessage(Text.literal("§o§6You have blocked " + blockedPlayer.getName().getString() + " from sending you teleport requests."), false);
+            blockingPlayer.sendMessage(Text.literal("§o§6You have blocked " + blockedPlayerName + " from sending you teleport requests."), false);
             return true;
         } else {
             throw new TpxBlockingFailedException("Failed to block player. You might have already blocked them.");
         }
     }
 
-    public static boolean unblockPlayerForPlayer(ServerPlayerEntity blockedPlayer, ServerPlayerEntity blockingPlayer, DatabaseManager databaseManager){
-        if (blockedPlayer.getUuid().equals(blockingPlayer.getUuid())){
+    public static boolean unblockPlayerForPlayer(String blockedPlayerName, ServerPlayerEntity blockingPlayer, DatabaseManager databaseManager){
+        if (blockedPlayerName.equals(blockingPlayer.getName().getString())){
             throw new TpxUnblockingFailedException("You can't unblock yourself.");
         }
-        if (databaseManager.isPlayerBlockedByPlayer(blockedPlayer.getName().getString(), blockingPlayer.getName().getString())){
-            blockingPlayer.sendMessage(Text.literal("§o§6You have unblocked " + blockingPlayer.getName().getString() + ". They can send you teleport requests again."), false);
-            if (!databaseManager.removePlayerFromBlocklist(blockedPlayer.getName().getString(), blockingPlayer.getName().getString()))
+        if (databaseManager.isPlayerBlockedByPlayer(blockedPlayerName, blockingPlayer.getName().getString())){
+            blockingPlayer.sendMessage(Text.literal("§o§6You have unblocked " + blockedPlayerName + ". They can send you teleport requests again."), false);
+            if (!databaseManager.removePlayerFromBlocklist(blockedPlayerName, blockingPlayer.getName().getString()))
                 throw new TpxUnblockingFailedException("Unblocking has failed");
             return true;
         } else {

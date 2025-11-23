@@ -150,13 +150,15 @@ public class TpxCommand {
             } else {
                 return 0;
             }
-        } catch (TpxRequestNotFoundException | NoSuchElementException | CommandSyntaxException e) {
+        } catch (TpxRequestAlreadyExistsException | TpxNotAllowedException | TpxRequestNotFoundException | NoSuchElementException | CommandSyntaxException  e) {
             LOGGER.debug("Request failed", e);
             Optional<ServerPlayerEntity> sender = Optional.ofNullable(context.getSource().getPlayer());
             sender.ifPresent(player -> player.sendMessage(Text.literal("§o§c An error has occured: " + e.getMessage()), false));
             return 0;
         } catch (Exception e) {
             LOGGER.error("Unexpected Exception: Failed to execute /tpa command", e);
+            Optional<ServerPlayerEntity> sender = Optional.ofNullable(context.getSource().getPlayer());
+            sender.ifPresent(player -> player.sendMessage(Text.literal("§o§c An unknown error has occured."), false));
             return 0;
         }
    }
@@ -188,6 +190,8 @@ public class TpxCommand {
             return 0;
         } catch (Exception e) {
             LOGGER.error("Unexpected Exception: Failed to execute /tpahere command", e);
+            Optional<ServerPlayerEntity> sender = Optional.ofNullable(context.getSource().getPlayer());
+            sender.ifPresent(player -> player.sendMessage(Text.literal("§o§c An unknown error has occured."), false));
             return 0;
         }
     }
@@ -213,6 +217,8 @@ public class TpxCommand {
             return 0;
         } catch (Exception e) {
             LOGGER.error("Unexpected Exception: Failed to execute /tphere command", e);
+            Optional<ServerPlayerEntity> sender = Optional.ofNullable(context.getSource().getPlayer());
+            sender.ifPresent(player -> player.sendMessage(Text.literal("§o§c An unknown error has occured."), false));
             return 0;
         }
     }
@@ -228,13 +234,15 @@ public class TpxCommand {
             } else {
                 return 0;
             }
-        } catch (TpxRequestNotFoundException | NoSuchElementException | CommandSyntaxException e) {
+        } catch (TpxRequestAlreadyExistsException | TpxNotAllowedException | TpxRequestNotFoundException | NoSuchElementException | CommandSyntaxException e) {
             LOGGER.debug("Request failed", e);
             Optional<ServerPlayerEntity> sender = Optional.ofNullable(context.getSource().getPlayer());
             sender.ifPresent(player -> player.sendMessage(Text.literal("§o§c An error has occured: " + e.getMessage()), false));
             return 0;
         } catch (Exception e) {
             LOGGER.error("Unexpected Exception: Failed to execute /tphereall command", e);
+            Optional<ServerPlayerEntity> sender = Optional.ofNullable(context.getSource().getPlayer());
+            sender.ifPresent(player -> player.sendMessage(Text.literal("§o§c An unknown error has occured."), false));
             return 0;
         }
     }
@@ -267,13 +275,15 @@ public class TpxCommand {
             } else {
                 return 0;
             }
-        } catch (TpxRequestNotFoundException | NoSuchElementException | CommandSyntaxException e) {
+        } catch (TpxRequestAlreadyExistsException | TpxNotAllowedException | TpxRequestNotFoundException | NoSuchElementException | CommandSyntaxException e) {
             LOGGER.debug("Request failed", e);
             Optional<ServerPlayerEntity> sender = Optional.ofNullable(context.getSource().getPlayer());
             sender.ifPresent(player -> player.sendMessage(Text.literal("§o§c An error has occured: " + e.getMessage()), false));
             return 0;
         } catch (Exception e) {
             LOGGER.error("Unexpected Exception: Failed to execute /tpdeny command", e);
+            Optional<ServerPlayerEntity> sender = Optional.ofNullable(context.getSource().getPlayer());
+            sender.ifPresent(player -> player.sendMessage(Text.literal("§o§c An unknown error has occured."), false));
             return 0;
         }
     }
@@ -303,13 +313,15 @@ public class TpxCommand {
             } else {
                 return 0;
             }
-        } catch (TpxRequestNotFoundException | NoSuchElementException | CommandSyntaxException e) {
+        } catch (TpxRequestAlreadyExistsException | TpxNotAllowedException | TpxRequestNotFoundException | NoSuchElementException | CommandSyntaxException e) {
             LOGGER.debug("Request failed", e);
             Optional<ServerPlayerEntity> sender = Optional.ofNullable(context.getSource().getPlayer());
             sender.ifPresent(player -> player.sendMessage(Text.literal("§o§c An error has occured: " + e.getMessage()), false));
             return 0;
         } catch (Exception e) {
             LOGGER.error("Unexpected Exception: Failed to execute /tpaccept command", e);
+            Optional<ServerPlayerEntity> sender = Optional.ofNullable(context.getSource().getPlayer());
+            sender.ifPresent(player -> player.sendMessage(Text.literal("§o§c An unknown error has occured."), false));
             return 0;
         }
     }
@@ -339,13 +351,15 @@ public class TpxCommand {
             } else {
                 return 0;
             }
-        } catch (TpxRequestNotFoundException | NoSuchElementException | CommandSyntaxException e) {
+        } catch (TpxRequestAlreadyExistsException | TpxNotAllowedException | TpxRequestNotFoundException | NoSuchElementException | CommandSyntaxException e) {
             LOGGER.debug("Request failed", e);
             Optional<ServerPlayerEntity> sender = Optional.ofNullable(context.getSource().getPlayer());
             sender.ifPresent(player -> player.sendMessage(Text.literal("§o§c An error has occured: " + e.getMessage()), false));
             return 0;
         } catch (Exception e) {
             LOGGER.error("Unexpected Exception: Failed to execute /tpcancel command", e);
+            Optional<ServerPlayerEntity> sender = Optional.ofNullable(context.getSource().getPlayer());
+            sender.ifPresent(player -> player.sendMessage(Text.literal("§o§c An unknown error has occured."), false));
             return 0;
         }
     }
@@ -353,27 +367,25 @@ public class TpxCommand {
     private static int executeTpBlock(CommandContext<ServerCommandSource> context, DatabaseManager dbManager) {
         try {
             String targetPlayerName = StringArgumentType.getString(context, "target");
-            List<ServerPlayerEntity> foundTargetPlayer = context.getSource().getWorld().getPlayers( playerEntity -> String.valueOf(playerEntity.getName().getString()).equals(targetPlayerName));
 
-            if (foundTargetPlayer.isEmpty()) {
-                throw new TpxBlockingFailedException("Couldn't find target player");
-            }
             ServerCommandSource source = context.getSource();
             ServerPlayerEntity player = source.getPlayerOrThrow();
 
-            boolean success = TpxRequestManager.blockPlayerFromRequesting(player, foundTargetPlayer.getFirst(), dbManager);
+            boolean success = TpxRequestManager.blockPlayerForPlayer(player, targetPlayerName, dbManager);
             if (success) {
                 return 1;
             } else {
                 return 0;
             }
-        } catch (TpxBlockingFailedException | NoSuchElementException | CommandSyntaxException e) {
+        } catch (TpxRequestAlreadyExistsException | TpxNotAllowedException | TpxRequestNotFoundException | NoSuchElementException | CommandSyntaxException e) {
             LOGGER.debug("Blocking failed", e);
             Optional<ServerPlayerEntity> sender = Optional.ofNullable(context.getSource().getPlayer());
             sender.ifPresent(player -> player.sendMessage(Text.literal("§o§c An error has occured: " + e.getMessage()), false));
             return 0;
         } catch (Exception e) {
             LOGGER.error("Unexpected Exception: Failed to execute /tpblock command", e);
+            Optional<ServerPlayerEntity> sender = Optional.ofNullable(context.getSource().getPlayer());
+            sender.ifPresent(player -> player.sendMessage(Text.literal("§o§c An unknown error has occured."), false));
             return 0;
         }
     }
@@ -381,27 +393,25 @@ public class TpxCommand {
     private static int executeTpUnblock(CommandContext<ServerCommandSource> context, DatabaseManager dbManager) {
         try {
             String targetPlayerName = StringArgumentType.getString(context, "target");
-            List<ServerPlayerEntity> foundTargetPlayer = context.getSource().getWorld().getPlayers( playerEntity -> String.valueOf(playerEntity.getName().getString()).equals(targetPlayerName));
 
-            if (foundTargetPlayer.isEmpty()) {
-                throw new TpxBlockingFailedException("Couldn't find target player");
-            }
             ServerCommandSource source = context.getSource();
             ServerPlayerEntity player = source.getPlayerOrThrow();
 
-            boolean success = TpxRequestManager.unblockPlayerForPlayer(foundTargetPlayer.getFirst(), player, dbManager);
+            boolean success = TpxRequestManager.unblockPlayerForPlayer(targetPlayerName, player, dbManager);
             if (success) {
                 return 1;
             } else {
                 return 0;
             }
-        } catch (TpxUnblockingFailedException | NoSuchElementException | CommandSyntaxException e) {
+        } catch (TpxRequestAlreadyExistsException | TpxNotAllowedException | TpxRequestNotFoundException | NoSuchElementException | CommandSyntaxException e) {
             LOGGER.debug("Unblocking failed", e);
             Optional<ServerPlayerEntity> sender = Optional.ofNullable(context.getSource().getPlayer());
             sender.ifPresent(player -> player.sendMessage(Text.literal("§o§c An error has occured: " + e.getMessage()), false));
             return 0;
         } catch (Exception e) {
             LOGGER.error("Unexpected Exception: Failed to execute /tpunblock command", e);
+            Optional<ServerPlayerEntity> sender = Optional.ofNullable(context.getSource().getPlayer());
+            sender.ifPresent(player -> player.sendMessage(Text.literal("§o§c An unknown error has occured."), false));
             return 0;
         }
     }
@@ -417,13 +427,15 @@ public class TpxCommand {
             } else {
                 return 0;
             }
-        } catch ( NoSuchElementException | CommandSyntaxException e) {
+        } catch ( TpxRequestAlreadyExistsException | TpxNotAllowedException | TpxRequestNotFoundException | NoSuchElementException | CommandSyntaxException e) {
             LOGGER.debug("Getting blocklist failed", e);
             Optional<ServerPlayerEntity> sender = Optional.ofNullable(context.getSource().getPlayer());
             sender.ifPresent(player -> player.sendMessage(Text.literal("§o§c An error has occured: " + e.getMessage()), false));
             return 0;
         } catch (Exception e) {
             LOGGER.error("Unexpected Exception: Failed to execute /tpblocklist command", e);
+            Optional<ServerPlayerEntity> sender = Optional.ofNullable(context.getSource().getPlayer());
+            sender.ifPresent(player -> player.sendMessage(Text.literal("§o§c An unknown error has occured."), false));
             return 0;
         }
     }

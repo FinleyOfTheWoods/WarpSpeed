@@ -255,7 +255,7 @@ public class TeleportUtils {
         boolean canSurviveFall = false;
         for (int i = 0; i < 4; i++) {
             BlockState state = world.getBlockState(pos.down(i));
-            if (!state.isAir()) {
+            if (!state.isAir() && isSafeToStandIn(state)) {
                 canSurviveFall = true;
             }
         }
@@ -274,10 +274,7 @@ public class TeleportUtils {
 
         boolean isHeadSafe = isSafeToStandIn(headState);
         boolean isFeetSafe = isSafeToStandIn(feetState);
-        if (!isHeadSafe || !isFeetSafe) {
-            return false;
-        }
-        return true;
+        return isHeadSafe && isFeetSafe;
     }
 
 
@@ -321,7 +318,7 @@ public class TeleportUtils {
         }
 
         // Safe blocks to stand on
-        if (state.isIn(BlockTags.SLABS)
+        return state.isIn(BlockTags.SLABS)
                 || state.isIn(BlockTags.STONE_PRESSURE_PLATES)
                 || state.isIn(BlockTags.STONE_BUTTONS)
                 || state.isIn(BlockTags.VALID_SPAWN)
@@ -340,12 +337,9 @@ public class TeleportUtils {
                 || state.isIn(BlockTags.WOODEN_DOORS)
                 || state.isIn(BlockTags.BANNERS)
                 || state.isIn(BlockTags.BEDS)
-                || state.isIn(BlockTags.BUTTONS)) {
-            return true;
-        }
+                || state.isIn(BlockTags.BUTTONS);
 
         // Non-solid blocks are not safe to stand in
-        return false;
     }
 
 
@@ -521,8 +515,7 @@ public class TeleportUtils {
         }
         // Parse the world ID and get the world
         RegistryKey<World> worldKey = RegistryKey.of(RegistryKeys.WORLD, Identifier.tryParse(targetWorldId));
-        ServerWorld targetWorld = server.getWorld(worldKey);
-        return targetWorld;
+        return server.getWorld(worldKey);
     }
 
     private static boolean isTeleportOnCooldown(ServerPlayerEntity player) {

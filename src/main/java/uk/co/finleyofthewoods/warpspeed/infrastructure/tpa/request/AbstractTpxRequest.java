@@ -7,6 +7,8 @@ import java.time.Instant;
 import java.util.List;
 
 public abstract class AbstractTpxRequest {
+    private static final int REQUEST_TIMEOUT_TIME = 60;
+
     Instant requestTimestamp;
     ServerPlayerEntity sender;
     List<ServerPlayerEntity> receivers;
@@ -56,7 +58,7 @@ public abstract class AbstractTpxRequest {
         //todo: expiration time configurable
         long elapsedSeconds = now.getEpochSecond() - requestTimestamp.getEpochSecond();
         // 20 seconds
-        return elapsedSeconds <= 20;
+        return elapsedSeconds <= REQUEST_TIMEOUT_TIME;
     }
 
     public boolean hasPermission() {
