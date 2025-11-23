@@ -6,25 +6,33 @@ A feature-rich Minecraft Fabric mod that provides advanced teleportation capabil
 
 ### 🏠 Home System
 - Set multiple home locations (up to 10 per player)
-- Teleport to any of your saved homes
-- Easy home management with list, set, and delete commands
-- Tab completion for home names
+- Teleport to your set bed location.
+- Teleport to any of your saved homes.
+- Easy home management with list, set, and delete commands.
+- Tab completion for home names.
 
 ### 🌟 Warp System
-- Create public or private warp points (up to 254 per player)
-- Public warps are accessible to all players
-- Private warps are only accessible to their creator
-- Tab completion for warp names
-- Ownership validation for warp deletion
+- Create public or private warp points (up to 254 per player).
+- Public (false) warps are accessible to all players.
+- Private (true) warps are only accessible to their creator.
+- Tab completion for warp names.
+- Ownership validation for warp deletion.
+
+### RTP (Random Teleport)
+Allows players to randomly teleport to a location within the world border to start their adventure.
+
+### TPX (Teleport Request)
+A request-based teleportation system that allows players to ask to teleport to others.
+
 
 ### 🔙 Back Command
-- Return to your previous location after teleporting
+- Return to your previous location after teleporting `/back`
 - Works with spawn, home, and warp teleporting
 - Returns to death location after dying
 - Supports "ping-pong" teleportation between two locations
 
 ### 🏔️ Spawn Teleportation
-- Quick teleportation to Overworld spawn
+- Quick teleportation to Overworld spawn `/spawn`
 
 ### 🎨 Visual & Audio Effects
 - Beautiful particle effects on departure and arrival
@@ -32,7 +40,7 @@ A feature-rich Minecraft Fabric mod that provides advanced teleportation capabil
 - Immersive sound effects
 
 ### 🛡️ Safety Features
-- Safe location finding with 3-block search radius
+- Safe location finding with a 10-block search radius
 - Cross-dimension validation and support
 - Input validation for home/warp names (alphanumeric, 1-32 characters)
 - Automatic cleanup of player data on disconnect
@@ -50,6 +58,18 @@ A feature-rich Minecraft Fabric mod that provides advanced teleportation capabil
 - `/warp <name>` - Teleport to a warp point
 - `/setWarp <name> <true|false>` - Create a warp (true = private, false = public)
 - `/delWarp <name>` - Delete one of your warp points
+
+### RTP Commands
+- `/rtp` - Teleport to a random location within the world border
+
+### TPX Commands
+- `/tpa <player>` - Send a teleport request to a specific player.
+- `/tpcancel <player>` - Cancel your pending teleport request.
+- `/tpaccept <player>` (or click the prompt in chat) - Accept an incoming request.
+- `/tpdeny <player>` (or click the prompt in chat) - Deny an incoming request.
+- `/tpblock <player>` - Block a player from sending teleport requests.
+- `/tpunblock <player>` - Unblock a player from sending teleport requests.
+- `/tpblocklist` - List all blocked players for teleport requests.
 
 ### Other Commands
 - `/spawn` - Teleport to Overworld spawn (works from any dimension)

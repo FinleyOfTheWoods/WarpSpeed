@@ -51,22 +51,30 @@ public class RTPRequestManager {
 
         boolean posFound = false;
 
-        for (int tries = 0; tries < 20 && !posFound; tries++) {
+        for (int tries = 0; tries < 30 && !posFound; tries++) {
             double xOffset = (RANDOM.nextDouble() * 2 - 1) * radius;
             double zOffset = (RANDOM.nextDouble() * 2 - 1) * radius;
             int x = (int) (centerX + xOffset);
             int z = (int) (centerZ + zOffset);
-            int y = world.getHeight() - world.getBottomY();
-            BlockPos pos = new BlockPos(x, y, z);
+            int y = world.getDimension().logicalHeight();
 
+            BlockPos pos = new BlockPos(x, y, z);
             RegistryEntry<Biome> biome = world.getBiome(pos);
             String biomeId = biome.getIdAsString();
 
             if (!DENY_BIOMES.contains(biomeId)) {
-                BlockState state = world.getBlockState(pos);
-                while (state.isAir()) {
-                    pos = pos.down(4);
+                BlockState state;
+                int airGapsFound = 0;
+
+                for (y = y-1; y > 0; y--) {
+                    pos = pos.down();
                     state = world.getBlockState(pos);
+                    if (state.isAir()) {
+                        airGapsFound++;
+                    }
+                    if (airGapsFound > 5 && !state.isAir()) {
+                        break;
+                    }
                 }
                 return pos;
             }

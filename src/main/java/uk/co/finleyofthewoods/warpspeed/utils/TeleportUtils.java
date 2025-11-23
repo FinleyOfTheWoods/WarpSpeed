@@ -302,7 +302,7 @@ public class TeleportUtils {
         if (state.isOf(Blocks.FIRE) || state.isOf(Blocks.SOUL_FIRE) ||
                 state.isOf(Blocks.CACTUS) || state.isOf(Blocks.MAGMA_BLOCK) ||
                 state.isOf(Blocks.WITHER_ROSE) || state.isOf(Blocks.POWDER_SNOW) ||
-                state.isIn(BlockTags.CAMPFIRES)) {
+                state.isIn(BlockTags.CAMPFIRES) || state.isOf(Blocks.VOID_AIR)) {
             return false;
         }
 
@@ -337,7 +337,9 @@ public class TeleportUtils {
                 || state.isIn(BlockTags.WOODEN_DOORS)
                 || state.isIn(BlockTags.BANNERS)
                 || state.isIn(BlockTags.BEDS)
-                || state.isIn(BlockTags.BUTTONS);
+                || state.isIn(BlockTags.BUTTONS)
+                || state.isOf(Blocks.END_STONE)
+                || state.isOf(Blocks.PURPUR_BLOCK);
 
         // Non-solid blocks are not safe to stand in
     }
