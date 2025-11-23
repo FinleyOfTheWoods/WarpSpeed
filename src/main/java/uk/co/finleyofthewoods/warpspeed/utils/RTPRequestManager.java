@@ -62,16 +62,14 @@ public class RTPRequestManager {
             RegistryEntry<Biome> biome = world.getBiome(pos);
             String biomeId = biome.getIdAsString();
 
-            if (DENY_BIOMES.contains(biomeId)) {
-                continue;
+            if (!DENY_BIOMES.contains(biomeId)) {
+                BlockState state = world.getBlockState(pos);
+                while (state.isAir()) {
+                    pos = pos.down(4);
+                    state = world.getBlockState(pos);
+                }
+                return pos;
             }
-
-            BlockState state = world.getBlockState(pos);
-            while (state.isAir()) {
-                pos = pos.down(4);
-                state = world.getBlockState(pos);
-            }
-            return pos;
         }
         return null;
     }
