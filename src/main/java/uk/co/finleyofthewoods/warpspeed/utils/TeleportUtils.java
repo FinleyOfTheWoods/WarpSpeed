@@ -20,6 +20,7 @@ import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.Vec3d;
 import net.minecraft.world.TeleportTarget;
 import net.minecraft.world.World;
+import net.minecraft.world.border.WorldBorder;
 import net.minecraft.world.chunk.WorldChunk;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -249,6 +250,11 @@ public class TeleportUtils {
     }
 
     private static boolean isSafeLocation(World world, BlockPos pos) {
+        WorldBorder border = world.getWorldBorder();
+        if (!border.contains(pos)) {
+            return false;
+        }
+
         BlockPos belowPos = pos.down();
         BlockPos headPos = pos.up();
 

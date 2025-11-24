@@ -26,7 +26,7 @@ public class RtpCommand {
         try {
             ServerCommandSource source = context.getSource();
             ServerPlayerEntity player = source.getPlayerOrThrow();
-            World world = source.getWorld();
+            World world = player.getEntityWorld();
             boolean success = TeleportUtils.teleportToRandomLocation(player, world);
             if (success) {
                 return 1;

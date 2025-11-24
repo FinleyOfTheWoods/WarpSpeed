@@ -8,11 +8,14 @@ import net.minecraft.util.math.BlockPos;
 import net.minecraft.world.World;
 import net.minecraft.world.biome.Biome;
 import net.minecraft.world.border.WorldBorder;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import uk.co.finleyofthewoods.warpspeed.config.ConfigManager;
 
 import java.util.*;
 
 public class RTPRequestManager {
+    private static final Logger LOGGER = LoggerFactory.getLogger(RTPRequestManager.class);
     private static final Random RANDOM = new Random();
 
     private static final List<String> DENY_BIOMES = new ArrayList<>() {{
@@ -56,6 +59,11 @@ public class RTPRequestManager {
             int y = world.getDimension().logicalHeight();
 
             BlockPos pos = new BlockPos(x, y, z);
+
+            if (!border.contains(pos)) {
+                continue;
+            }
+
             RegistryEntry<Biome> biome = world.getBiome(pos);
             String biomeId = biome.getIdAsString();
 
