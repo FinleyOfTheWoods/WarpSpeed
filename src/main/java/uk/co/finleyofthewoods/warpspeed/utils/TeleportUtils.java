@@ -9,6 +9,7 @@ import net.minecraft.registry.RegistryKey;
 import net.minecraft.registry.RegistryKeys;
 import net.minecraft.registry.tag.BlockTags;
 import net.minecraft.server.MinecraftServer;
+import net.minecraft.server.command.ServerCommandSource;
 import net.minecraft.server.network.ServerPlayerEntity;
 import net.minecraft.server.world.ServerWorld;
 import net.minecraft.sound.SoundCategory;
@@ -19,6 +20,7 @@ import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.Vec3d;
 import net.minecraft.world.TeleportTarget;
 import net.minecraft.world.World;
+import net.minecraft.world.chunk.WorldChunk;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import uk.co.finleyofthewoods.warpspeed.config.ConfigManager;
@@ -59,14 +61,21 @@ public class TeleportUtils {
         }
         try {
             if (Objects.equals(homeName, "bed")) {
+                MinecraftServer server = player.getCommandSource().getServer();
+                World overworld = server.getWorld(World.OVERWORLD);
+                if (overworld == null) {
+                    LOGGER.warn("Failed to find overworld for player {}: {}", player.getName().toString(), homeName);
+                    return false;
+                }
                 ServerPlayerEntity.Respawn respawn = player.getRespawn();
                 if (respawn == null) {
                     player.sendMessage(Text.literal("No bed position set"), false);
                     return false;
                 }
                 BlockPos playerBedPos = respawn.respawnData().getPos();
-
-                BlockEntity bedBlockEntity = player.getEntityWorld().getBlockEntity(playerBedPos);
+                LOGGER.error("bed pos: {}", playerBedPos);
+                BlockEntity bedBlockEntity = overworld.getBlockEntity(playerBedPos);
+                LOGGER.error("bed block entity: {}", bedBlockEntity.toString());
                 if (bedBlockEntity == null || bedBlockEntity.isRemoved()) {
                     player.sendMessage(Text.literal("No bed position set"), false);
                     return false;
@@ -74,8 +83,8 @@ public class TeleportUtils {
 
                 LOGGER.debug("Attempting to teleport {} to bed spawn at ({}, {}, {})",
                         player.getName().toString(), playerBedPos.getX(), playerBedPos.getY(), playerBedPos.getZ());
-                BlockPos safeLoc = findSafeLocation(player.getEntityWorld(), playerBedPos);
-                teleportPlayer(player, player.getEntityWorld(), safeLoc);
+                BlockPos safeLoc = findSafeLocation(overworld, playerBedPos);
+                teleportPlayer(player, overworld, safeLoc);
                 return true;
             }
             HomePosition home = dbManager.getHome(player.getUuid(), homeName);
@@ -338,7 +347,8 @@ public class TeleportUtils {
                 || state.isIn(BlockTags.BEDS)
                 || state.isIn(BlockTags.BUTTONS)
                 || state.isOf(Blocks.END_STONE)
-                || state.isOf(Blocks.PURPUR_BLOCK);
+                || state.isOf(Blocks.PURPUR_BLOCK)
+                || state.isOf(Blocks.MYCELIUM);
 
         // Non-solid blocks are not safe to stand in
     }
