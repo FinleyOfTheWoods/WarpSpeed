@@ -35,8 +35,9 @@ public class TpxCommand {
     private static SuggestionProvider<ServerCommandSource> makeTargetSuggestions() {
         return (context, builder) -> {
             try {
+                context.getSource().getServer().getPlayerNames();
                 ServerPlayerEntity player = context.getSource().getPlayerOrThrow();
-                List<ServerPlayerEntity> playerList = context.getSource().getWorld().getPlayers();
+                List<ServerPlayerEntity> playerList = context.getSource().getServer().getPlayerManager().getPlayerList();
                 return suggestMatching(playerList, player, builder);
             } catch (CommandSyntaxException e) {
                 return Suggestions.empty();
