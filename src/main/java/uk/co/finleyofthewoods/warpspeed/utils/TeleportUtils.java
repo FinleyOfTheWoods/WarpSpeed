@@ -3,7 +3,10 @@ package uk.co.finleyofthewoods.warpspeed.utils;
 import net.minecraft.block.BlockState;
 import net.minecraft.block.Blocks;
 import net.minecraft.block.entity.BlockEntity;
+import net.minecraft.entity.EquipmentSlot;
 import net.minecraft.fluid.Fluids;
+import net.minecraft.item.ItemStack;
+import net.minecraft.item.Items;
 import net.minecraft.particle.ParticleTypes;
 import net.minecraft.registry.RegistryKey;
 import net.minecraft.registry.RegistryKeys;
@@ -48,7 +51,7 @@ public class TeleportUtils {
                     spawnPos.getX(),
                     spawnPos.getY(),
                     spawnPos.getZ());
-            BlockPos safeLoc = findSafeLocation(world, spawnPos);
+            BlockPos safeLoc = findSafeLocation(world, spawnPos, player);
             return teleportPlayer(player, world, safeLoc);
         } catch (Exception e) {
             handleException(e, "Failed to teleport to spawn", player);
@@ -84,7 +87,7 @@ public class TeleportUtils {
 
                 LOGGER.debug("Attempting to teleport {} to bed spawn at ({}, {}, {})",
                         player.getName().toString(), playerBedPos.getX(), playerBedPos.getY(), playerBedPos.getZ());
-                BlockPos safeLoc = findSafeLocation(overworld, playerBedPos);
+                BlockPos safeLoc = findSafeLocation(overworld, playerBedPos, player);
                 teleportPlayer(player, overworld, safeLoc);
                 return true;
             }
@@ -104,7 +107,7 @@ public class TeleportUtils {
                 return false;
             }
 
-            BlockPos safeLoc = findSafeLocation(targetWorld, homePos);
+            BlockPos safeLoc = findSafeLocation(targetWorld, homePos, player);
             return teleportPlayer(player, targetWorld, safeLoc);
         } catch (Exception e) {
             handleException(e, "Failed to teleport to home " + homeName, player);
@@ -133,7 +136,7 @@ public class TeleportUtils {
                 return false;
             }
 
-            BlockPos safeLoc = findSafeLocation(targetWorld, pos);
+            BlockPos safeLoc = findSafeLocation(targetWorld, pos, player);
             return teleportPlayer(player, targetWorld, safeLoc);
         } catch (Exception e) {
             handleException(e, "Failed to teleport to last location", player);
@@ -168,7 +171,7 @@ public class TeleportUtils {
                 return false;
             }
 
-            BlockPos safeLoc = findSafeLocation(targetWorld, warpPos);
+            BlockPos safeLoc = findSafeLocation(targetWorld, warpPos, player);
             return teleportPlayer(player, targetWorld, safeLoc);
         } catch (Exception e) {
             handleException(e, "Failed to teleport to warp " + warpName, player);
@@ -189,7 +192,7 @@ public class TeleportUtils {
                     targetPos.getY(),
                     targetPos.getZ());
             playerToTeleport.sendMessage(Text.literal("§6§oFinding a safe location near " + targetPlayer.getName().getString()),true);
-            BlockPos safeLoc = findSafeLocation(targetWorld, targetPos);
+            BlockPos safeLoc = findSafeLocation(targetWorld, targetPos, playerToTeleport);
             playerToTeleport.sendMessage(Text.literal("§6§oDone. Teleporting now."),true);
             return teleportPlayer(playerToTeleport, targetWorld, safeLoc);
         } catch (Exception e) {
@@ -204,7 +207,7 @@ public class TeleportUtils {
         }
         BlockPos pos = RTPRequestManager.requestRTP(player, world);
         try {
-            BlockPos safePos = findSafeLocation(world, pos);
+            BlockPos safePos = findSafeLocation(world, pos, player);
             if (teleportPlayer(player, world, safePos)) {
                 return true;
             } else {
@@ -217,8 +220,8 @@ public class TeleportUtils {
         }
     }
 
-    public static BlockPos findSafeLocation(World world, BlockPos spawnPos) throws NoSafeLocationFoundException {
-        if (isSafeLocation(world, spawnPos)) {
+    public static BlockPos findSafeLocation(World world, BlockPos spawnPos, ServerPlayerEntity player) throws NoSafeLocationFoundException {
+        if (isSafeLocation(world, spawnPos, player)) {
             return spawnPos;
         }
         int searchRadius = 10;
@@ -236,7 +239,7 @@ public class TeleportUtils {
                         }
 
                         BlockPos pos = spawnPos.add(dx, dy, dz).up();
-                        if (isSafeLocation(world, pos)) {
+                        if (isSafeLocation(world, pos, player)) {
                             LOGGER.debug("Found safe location at distance {} with offset ({}, {}, {}) from location",
                                     radius, dx, dy, dz);
                             return pos;
@@ -249,7 +252,7 @@ public class TeleportUtils {
         throw new NoSafeLocationFoundException("Failed to find safe location");
     }
 
-    private static boolean isSafeLocation(World world, BlockPos pos) {
+    private static boolean isSafeLocation(World world, BlockPos pos, ServerPlayerEntity player) {
         WorldBorder border = world.getWorldBorder();
         if (!border.contains(pos)) {
             return false;
@@ -267,10 +270,15 @@ public class TeleportUtils {
         }
 
         boolean canSurviveFall = false;
-        for (int i = 0; i < 4; i++) {
-            BlockState state = world.getBlockState(pos.down(i));
-            if (!state.isAir() && isSafeToStandIn(state)) {
-                canSurviveFall = true;
+        ItemStack chestEquipment = player.getEquippedStack(EquipmentSlot.CHEST);
+        if (chestEquipment.isOf(Items.ELYTRA)) {
+            canSurviveFall = true;
+        } else {
+            for (int i = 0; i < 4; i++) {
+                BlockState state = world.getBlockState(pos.down(i));
+                if (!state.isAir() && isSafeToStandIn(state)) {
+                    canSurviveFall = true;
+                }
             }
         }
         if (!canSurviveFall) {
