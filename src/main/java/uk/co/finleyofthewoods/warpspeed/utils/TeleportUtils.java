@@ -20,6 +20,7 @@ import net.minecraft.sound.SoundEvents;
 import net.minecraft.text.Text;
 import net.minecraft.util.Identifier;
 import net.minecraft.util.math.BlockPos;
+import net.minecraft.util.math.GlobalPos;
 import net.minecraft.util.math.Vec3d;
 import net.minecraft.world.TeleportTarget;
 import net.minecraft.world.World;
@@ -118,6 +119,17 @@ public class TeleportUtils {
     public static boolean teleportToLastLocation(ServerPlayerEntity player) {
         if (isTeleportOnCooldown(player)) {
             return false;
+        }
+        Optional<GlobalPos> deathPos = player.getLastDeathPos();
+        if (deathPos.isPresent()) {
+            LOGGER.debug("Player {} has a death position, teleporting to that instead of last location", player.getName().toString());
+            BlockPos pos = deathPos.get().pos();
+            World world = getTargetWorld(player, deathPos.get().dimension().toString());
+            if (world == null) {
+                LOGGER.debug("Failed to teleport {} to death position: target world not found", player.getName().toString());
+                return false;
+            }
+            return teleportPlayer(player, world, pos);
         }
         try {
             if (!PlayerLocationTracker.hasPreviousLocation(player)) {
@@ -368,6 +380,13 @@ public class TeleportUtils {
     private static boolean teleportPlayer(ServerPlayerEntity player, World targetWorld, BlockPos pos) {
         // Store current location as previous location
         PlayerLocationTracker.storeCurrentLocation(player);
+
+        // force player to dismount their mount.
+        player.stopRiding();
+        // force player to stop gliding.
+        player.stopGliding();
+        // force player to stop using item.
+        player.stopUsingItem();
 
         double x = pos.getX() + 0.5;
         double y = pos.getY() + 1;

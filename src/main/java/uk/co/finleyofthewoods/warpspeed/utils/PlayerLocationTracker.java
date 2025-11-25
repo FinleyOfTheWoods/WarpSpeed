@@ -17,7 +17,6 @@ public class PlayerLocationTracker {
     private static final Map<UUID, PlayerLocation> deathLocations = new HashMap<>();
 
     public record PlayerLocation(int x, int y, int z, String worldId) {
-
         public BlockPos getBlockPos() {
                 return new BlockPos(x, y, z);
             }
