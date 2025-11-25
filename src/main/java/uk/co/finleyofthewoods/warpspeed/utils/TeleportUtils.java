@@ -269,22 +269,6 @@ public class TeleportUtils {
             return false;
         }
 
-        boolean canSurviveFall = false;
-        ItemStack chestEquipment = player.getEquippedStack(EquipmentSlot.CHEST);
-        if (chestEquipment.isOf(Items.ELYTRA)) {
-            canSurviveFall = true;
-        } else {
-            for (int i = 0; i < 4; i++) {
-                BlockState state = world.getBlockState(pos.down(i));
-                if (!state.isAir() && isSafeToStandIn(state)) {
-                    canSurviveFall = true;
-                }
-            }
-        }
-        if (!canSurviveFall) {
-            return false;
-        }
-
         boolean hasSafeBase = belowState.isSolidBlock(world, pos)
                 || belowState.isOf(Blocks.WATER)
                 || !belowState.getFluidState().isEmpty()
@@ -294,9 +278,22 @@ public class TeleportUtils {
             return false;
         }
 
+        ItemStack chestEquipment = player.getEquippedStack(EquipmentSlot.CHEST);
+        boolean canSurviveFall;
+        canSurviveFall = !chestEquipment.isEmpty() && chestEquipment.getItem() == Items.ELYTRA;
+        if (!canSurviveFall) {
+            for (int i = 0; i < 4; i++) {
+                BlockState state = world.getBlockState(pos.down(i));
+                if (!state.isAir() && isSafeToStandIn(state)) {
+                    canSurviveFall = true;
+                    break;
+                }
+            }
+        }
+
         boolean isHeadSafe = isSafeToStandIn(headState);
         boolean isFeetSafe = isSafeToStandIn(feetState);
-        return isHeadSafe && isFeetSafe;
+        return isHeadSafe && isFeetSafe && canSurviveFall;
     }
 
 
