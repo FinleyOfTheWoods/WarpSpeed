@@ -9,12 +9,13 @@ import org.slf4j.LoggerFactory;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.UUID;
+import java.util.concurrent.ConcurrentHashMap;
 
 public class PlayerLocationTracker {
     private static final Logger LOGGER = LoggerFactory.getLogger(PlayerLocationTracker.class);
 
-    private static final Map<UUID, PlayerLocation> previousLocations = new HashMap<>();
-    private static final Map<UUID, PlayerLocation> deathLocations = new HashMap<>();
+    private static final Map<UUID, PlayerLocation> previousLocations = new ConcurrentHashMap<>();
+    private static final Map<UUID, PlayerLocation> deathLocations = new ConcurrentHashMap<>();
 
     public record PlayerLocation(int x, int y, int z, String worldId) {
         public BlockPos getBlockPos() {

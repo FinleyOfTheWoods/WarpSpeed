@@ -9,6 +9,8 @@ import java.io.File;
 import java.io.FileReader;
 import java.io.FileWriter;
 
+import static uk.co.finleyofthewoods.warpspeed.Warpspeed.MOD_ID;
+
 public class ConfigManager {
     private final static Logger LOGGER = LoggerFactory.getLogger(ConfigManager.class);
     private static final Gson GSON = new Gson();
@@ -25,15 +27,15 @@ public class ConfigManager {
     private static void load() {
         if (CONFIG_FILE.exists()) {
             try (FileReader reader = new FileReader(CONFIG_FILE)) {
-                LOGGER.error("Loading config from file");
+                LOGGER.info("[{}] Loading config from file", MOD_ID);
                 INSTANCE = GSON.fromJson(reader, Config.class);
             } catch (Exception e) {
-                LOGGER.error("Failed to load config from file", e);
+                LOGGER.info("[{}] Failed to load config from file", MOD_ID, e);
                 INSTANCE = new Config();
                 save();
             }
         } else {
-            LOGGER.error("Config file does not exist, creating new one");
+            LOGGER.info("[{}] Config file does not exist, creating new one", MOD_ID);
             INSTANCE = new Config();
             save();
         }
@@ -41,13 +43,12 @@ public class ConfigManager {
 
     private static void save() {
         try {
-            LOGGER.error("Saving config to file");
+            LOGGER.info("[{}] Saving config to file", MOD_ID);
             try (FileWriter writer = new FileWriter(CONFIG_FILE)) {
                 GSON.toJson(INSTANCE, writer);
             }
         } catch (Exception e) {
-            LOGGER.error("Unexpected error whilst saving config", e);
-            e.printStackTrace();
+            LOGGER.error("[{}] Unexpected error whilst saving config", MOD_ID, e);
         }
     }
 
@@ -56,7 +57,7 @@ public class ConfigManager {
             INSTANCE.setPlayerHomeLimit(maxPlayerHomes);
             save();
         } catch (Exception e) {
-            LOGGER.error("Unexpected error whilst saving config", e);
+            LOGGER.error("[{}] Unexpected error whilst saving config", MOD_ID, e);
             throw new RuntimeException("Unexpected error whilst saving config");
         }
     }
@@ -66,7 +67,7 @@ public class ConfigManager {
             INSTANCE.setPlayerWarpLimit(maxPlayerWarps);
             save();
         } catch (Exception e) {
-            LOGGER.error("Unexpected error whilst saving config", e);
+            LOGGER.error("[{}] Unexpected error whilst saving config", MOD_ID, e);
             throw new RuntimeException("Unexpected error whilst saving config");
         }
     }

@@ -82,19 +82,27 @@ public class WarpCommand {
                         .suggests(accessibleWarpSuggestions(dbManager))
                         .executes(context -> executeTeleportToWarp(context, dbManager)))
         );
-        dispatcher.register(literal("setWarp")
-                .requires(source -> source.getPlayer() != null)
-                .then(argument("warpName", StringArgumentType.word())
-                        .then(argument("private", StringArgumentType.word())
-                                .suggests(isPrivateSuggestion())
-                                .executes(context -> executeSetWarp(context, dbManager))))
-        );
-        dispatcher.register(literal("delWarp")
-                .requires(source -> source.getPlayer() != null)
-                .then(argument("warpName", StringArgumentType.word())
-                        .suggests(playerWarpSuggestions(dbManager))
-                        .executes(context -> executeDeleteWarp(context, dbManager)))
-        );
+        String[] setWarpAliases = {"setWarp", "setwarp", "createwarp"};
+        for (String alias : setWarpAliases) {
+            dispatcher.register(literal(alias)
+                    .requires(source -> source.getPlayer() != null)
+                    .then(argument("warpName", StringArgumentType.word())
+                            .then(argument("private", StringArgumentType.word())
+                                    .suggests(isPrivateSuggestion())
+                                    .executes(context -> executeSetWarp(context, dbManager))))
+            );
+        }
+        String[] delWarpAliases = {"delWarp", "delwarp", "deletewarp"};
+        for (String alias : delWarpAliases) {
+            dispatcher.register(literal(alias)
+                    .requires(source -> source.getPlayer() != null)
+                    .then(argument("warpName", StringArgumentType.word())
+                            .suggests(playerWarpSuggestions(dbManager))
+                            .executes(context -> executeDeleteWarp(context, dbManager)))
+            );
+        }
+
+
     }
 
     private static int executeTeleportToWarp(CommandContext<ServerCommandSource> context, DatabaseManager dbManager) {

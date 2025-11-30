@@ -11,6 +11,8 @@ import java.io.File;
 import java.sql.*;
 import java.util.*;
 
+import static uk.co.finleyofthewoods.warpspeed.Warpspeed.MOD_ID;
+
 public class DatabaseManager {
     private static final Logger LOGGER = LoggerFactory.getLogger(DatabaseManager.class);
     private static final File DB_FILE = FabricLoader.getInstance().getConfigDir().resolve("warpspeed/warp_points.db").toFile();
@@ -21,22 +23,22 @@ public class DatabaseManager {
             File parentDir = DB_FILE.getParentFile();
             if (parentDir != null && !parentDir.exists()) {
                 parentDir.mkdirs();
-                LOGGER.info("Created database directory {}", parentDir.getAbsolutePath());
+                LOGGER.info("[{}] Created database directory {}", MOD_ID, parentDir.getAbsolutePath());
             }
             connection = DriverManager.getConnection("jdbc:sqlite:" + DB_FILE);
-            LOGGER.info("Connected to SQLite database: {}", DB_FILE);
+            LOGGER.info("[{}] Connected to SQLite database: {}", MOD_ID, DB_FILE);
 
             createTables();
         } catch (SecurityException e) {
-            LOGGER.error("Failed to create database directory", e);
+            LOGGER.error("[{}] Failed to create database directory", MOD_ID, e);
         } catch (SQLException e) {
-            LOGGER.error("Failed to initialise database", e);
+            LOGGER.error("[{}] Failed to initialise database", MOD_ID, e);
         }
     }
 
     private void ensureConnection() throws SQLException {
         if (connection == null || connection.isClosed()) {
-            LOGGER.warn("Database connection was closed, reopening...");
+            LOGGER.warn("[{}] Database connection was closed, reopening...", MOD_ID);
             String url = "jdbc:sqlite:" + DB_FILE;
             connection = DriverManager.getConnection(url);
 
@@ -46,7 +48,7 @@ public class DatabaseManager {
             stmt.execute("PRAGMA busy_timeout=5000;");
             stmt.close();
 
-            LOGGER.info("Database connection re-established");
+            LOGGER.info("[{}] Database connection re-established", MOD_ID);
         }
     }
 
@@ -67,14 +69,14 @@ public class DatabaseManager {
                 """;
         try (Statement stmt = connection.createStatement()) {
             stmt.execute(createHomesTableSQL);
-            LOGGER.info("Homes tables created or already exists");
+            LOGGER.info("[{}] Homes tables created or already exists", MOD_ID);
         }
 
         // Create an index for faster lookups
         String createHomesIndexSQL = "CREATE INDEX IF NOT EXISTS idx_player_homes ON homes(player_uuid);";
         try (Statement stmt = connection.createStatement()) {
             stmt.execute(createHomesIndexSQL);
-            LOGGER.info("Homes index created or already exists");
+            LOGGER.info("[{}] Homes index created or already exists", MOD_ID);
         }
 
         String createWarpsTableSQL = """
@@ -93,12 +95,12 @@ public class DatabaseManager {
                 """;
         try (Statement stmt = connection.createStatement()) {
             stmt.execute(createWarpsTableSQL);
-            LOGGER.info("Warps tables created or already exists");
+            LOGGER.info("[{}] Warps tables created or already exists", MOD_ID);
         }
         String createWarpsIndexSQL = "CREATE INDEX IF NOT EXISTS idx_player_warps ON warps(player_uuid);";
         try (Statement stmt = connection.createStatement()) {
             stmt.execute(createWarpsIndexSQL);
-            LOGGER.info("Warps index created or already exists");
+            LOGGER.info("[{}] Warps index created or already exists", MOD_ID);
         }
 
         String createPlayerBlockListTableSQL = """
@@ -112,14 +114,14 @@ public class DatabaseManager {
                 """;
         try (Statement stmt = connection.createStatement()) {
             stmt.execute(createPlayerBlockListTableSQL);
-            LOGGER.info("Blocklist table created or already exists");
+            LOGGER.info("[{}] Blocklist table created or already exists", MOD_ID);
         }
 
         // Create an index for faster lookups
         String createBlocklistIndexSQL = "CREATE INDEX IF NOT EXISTS idx_blocklist_player ON blocklist(blocker_player_username);";
         try (Statement stmt = connection.createStatement()) {
             stmt.execute(createBlocklistIndexSQL);
-            LOGGER.info("Blocklist index created or already exists");
+            LOGGER.info("[{}] Blocklist index created or already exists", MOD_ID);
         }
     }
     /**
@@ -151,11 +153,11 @@ public class DatabaseManager {
                 pstmt.setLong(7, home.createdAt());
 
                 int affected = pstmt.executeUpdate();
-                LOGGER.debug("Saved home '{}' for player {}", home.homeName(), home.playerUUID());
+                LOGGER.debug("[{}] Saved home '{}' for player {}", MOD_ID, home.homeName(), home.playerUUID());
                 return affected > 0;
             }
         } catch (SQLException e) {
-            LOGGER.error("Failed to save home", e);
+            LOGGER.error("[{}] Failed to save home", MOD_ID, e);
             return false;
         }
     }
@@ -184,12 +186,12 @@ public class DatabaseManager {
                             rs.getLong("created_at")
                     );
                 } else {
-                    LOGGER.debug("Home '{}' not found", homeName);
+                    LOGGER.debug("[{}] Home '{}' not found", MOD_ID, homeName);
                     return null;
                 }
             }
         } catch (SQLException e) {
-            LOGGER.error("Failed to get home", e);
+            LOGGER.error("[{}] Failed to get home", MOD_ID, e);
             return null;
         }
     }
@@ -220,11 +222,11 @@ public class DatabaseManager {
                 }
             }
         } catch (SQLException e) {
-            LOGGER.error("Failed to get player homes", e);
+            LOGGER.warn("[{}] Failed to get player homes", MOD_ID, e);
             return homes;
         }
         if (homes.isEmpty()) {
-            LOGGER.debug("No homes found for player {}", playerUUID);
+            LOGGER.debug("[{}] No homes found for player {}", MOD_ID, playerUUID);
         }
         return homes;
     }
@@ -242,11 +244,11 @@ public class DatabaseManager {
                 pstmt.setString(2, homeName);
 
                 int affected = pstmt.executeUpdate();
-                LOGGER.debug("Removed home '{}' for player {} (affected rows: {})", homeName, playerUUID, affected);
+                LOGGER.debug("[{}] Removed home '{}' for player {} (affected rows: {})", MOD_ID, homeName, playerUUID, affected);
                 return affected > 0;
             }
         } catch (SQLException e) {
-            LOGGER.error("Failed to remove home", e);
+            LOGGER.error("[{}] Failed to remove home", MOD_ID, e);
             return false;
         }
     }
@@ -267,11 +269,12 @@ public class DatabaseManager {
                 if (rs.next()) {
                     return rs.getInt(1) > 0;
                 } else {
-                    LOGGER.debug("Home '{}' not found", homeName);
+                    LOGGER.debug("[{}] Home '{}' not found", MOD_ID, homeName);
                     return false;
                 }
             }
         } catch (SQLException e) {
+            LOGGER.error("[{}] Failed to check if home exists", MOD_ID, e);
             return false;
         }
     }
@@ -291,12 +294,12 @@ public class DatabaseManager {
                 if (rs.next()) {
                     return rs.getInt(1);
                 } else {
-                    LOGGER.debug("No homes found for player {}", playerUUID);
+                    LOGGER.debug("[{}] No homes found for player {}", MOD_ID, playerUUID);
                     return 0;
                 }
             }
         } catch (SQLException e) {
-            LOGGER.error("Failed to get home count", e);
+            LOGGER.error("[{}] Failed to get home count", MOD_ID, e);
             return 0;
         }
     }
@@ -316,11 +319,11 @@ public class DatabaseManager {
                 pstmt.setLong(8, warp.createdAt());
 
                 int affected = pstmt.executeUpdate();
-                LOGGER.debug("Saved warp '{}' for player {}", warp.warpName(), warp.playerUUID());
+                LOGGER.debug("[{}] Saved warp '{}' for player {}", MOD_ID, warp.warpName(), warp.playerUUID());
                 return affected > 0;
             }
         } catch (SQLException e) {
-            LOGGER.error("Failed to save warp", e);
+            LOGGER.error("[{}] Failed to save warp", MOD_ID, e);
             return false;
         }
     }
@@ -336,12 +339,12 @@ public class DatabaseManager {
                  if (rs.next()) {
                      return rs.getInt(1) > 0;
                  } else {
-                     LOGGER.debug("Warp '{}' not found", warpName);
+                     LOGGER.debug("[{}] Warp '{}' not found", MOD_ID, warpName);
                      return false;
                  }
             }
         } catch (SQLException e) {
-            LOGGER.error("Failed to check if warp exists", e);
+            LOGGER.error("[{}] Failed to check if warp exists", MOD_ID, e);
             return false;
         }
     }
@@ -359,7 +362,7 @@ public class DatabaseManager {
             }
             }
         } catch (SQLException e) {
-            LOGGER.error("Failed to get warp count", e);
+            LOGGER.error("[{}] Failed to get warp count", MOD_ID, e);
         }
         return 0;
     }
@@ -384,12 +387,12 @@ public class DatabaseManager {
                             rs.getLong("created_at")
                     );
                 } else {
-                    LOGGER.debug("Warp '{}' not found", warpName);
+                    LOGGER.debug("[{}] Warp '{}' not found", MOD_ID, warpName);
                     return null;
                 }
             }
         } catch (SQLException e) {
-            LOGGER.error("Failed to get warp", e);
+            LOGGER.error("[{}] Failed to get warp", MOD_ID, e);
             return null;
         }
     }
@@ -403,11 +406,11 @@ public class DatabaseManager {
                 pstmt.setString(2, warpName);
 
                 int affected = pstmt.executeUpdate();
-                LOGGER.debug("Removed warp '{}' for player {} (affected rows: {})", warpName, playerUuid, affected);
+                LOGGER.debug("[{}] Removed warp '{}' for player {} (affected rows: {})", MOD_ID, warpName, playerUuid, affected);
                 return affected > 0;
             }
         } catch (SQLException e) {
-            LOGGER.error("Failed to remove warp", e);
+            LOGGER.error("[{}] Failed to remove warp", MOD_ID, e);
             return false;
         }
     }
@@ -430,7 +433,7 @@ public class DatabaseManager {
                 }
             }
         } catch (SQLException e) {
-            LOGGER.error("Failed to get accessible warp names", e);
+            LOGGER.error("[{}] Failed to get accessible warp names", MOD_ID, e);
         }
 
         return warpNames;
@@ -453,7 +456,7 @@ public class DatabaseManager {
                 }
             }
         } catch (SQLException e) {
-            LOGGER.error("Failed to get player warp names", e);
+            LOGGER.error("[{}] Failed to get player warp names", MOD_ID, e);
         }
 
         return warpNames;
@@ -476,11 +479,11 @@ public class DatabaseManager {
                 pstmt.setLong(3, System.currentTimeMillis());
 
                 int affected = pstmt.executeUpdate();
-                LOGGER.debug("Added player '{}' to blocklist for player {}", blockedPLayerUserName, blockerUserName);
+                LOGGER.debug("[{}] Added player '{}' to blocklist for player {}", MOD_ID, blockedPLayerUserName, blockerUserName);
                 return affected > 0;
             }
         } catch (SQLException e) {
-            LOGGER.error("Failed to save player to blocklist", e);
+            LOGGER.error("[{}] Failed to save player to blocklist", MOD_ID, e);
             return false;
         }
     }
@@ -504,12 +507,12 @@ public class DatabaseManager {
                             rs.getString("blocked_player_username")
                     );
                 } else {
-                    LOGGER.debug("Blocklist entry '{}' not found for player {}", blockedUserName, blockerUserName);
+                    LOGGER.debug("[{}] Blocklist entry '{}' not found for player {}", MOD_ID, blockedUserName, blockerUserName);
                     return null;
                 }
             }
         } catch (SQLException e) {
-            LOGGER.error("Failed to get blocklist entry", e);
+            LOGGER.error("[{}] Failed to get blocklist entry", MOD_ID, e);
             return null;
         }
     }
@@ -537,7 +540,7 @@ public class DatabaseManager {
                 return new BlocklistOfPlayer(blockerUserName, blockedByBlockerAt);
             }
         } catch (SQLException e) {
-            LOGGER.error("Failed to get player homes", e);
+            LOGGER.error("[{}] Failed to get player homes", MOD_ID, e);
             return new BlocklistOfPlayer(blockerUserName, Map.of());
         }
     }
@@ -555,11 +558,11 @@ public class DatabaseManager {
                 pstmt.setString(2, blockedPlayerUserName);
 
                 int affected = pstmt.executeUpdate();
-                LOGGER.debug("Removed player '{}' from blocklist of  player {} (affected rows: {})", blockedPlayerUserName, blockerPlayerUserName, affected);
+                LOGGER.debug("[{}] Removed player '{}' from blocklist of  player {} (affected rows: {})", MOD_ID, blockedPlayerUserName, blockerPlayerUserName, affected);
                 return affected > 0;
             }
         } catch (SQLException e) {
-            LOGGER.error("Failed to remove player from blocklist", e);
+            LOGGER.error("[{}] Failed to remove player from blocklist", MOD_ID, e);
             return false;
         }
     }
@@ -580,7 +583,7 @@ public class DatabaseManager {
                 if (rs.next()) {
                    return rs.getInt(1) > 0;
                 } else {
-                    LOGGER.debug("Player '{}' is not blocked by player '{}')", blockedPlayerUserName, blockerPlayerUserName);
+                    LOGGER.debug("[{}] Player '{}' is not blocked by player '{}')", MOD_ID, blockedPlayerUserName, blockerPlayerUserName);
                     return false;
                 }
             }
@@ -596,10 +599,10 @@ public class DatabaseManager {
         try {
             if (connection != null && !connection.isClosed()) {
                 connection.close();
-                LOGGER.info("Database connection closed");
+                LOGGER.info("[{}] Database connection closed", MOD_ID);
             }
         } catch (SQLException e) {
-            LOGGER.error("Failed to close database connection", e);
+            LOGGER.error("[{}] Failed to close database connection", MOD_ID, e);
         }
     }
 }

@@ -86,19 +86,25 @@ public class HomeCommand {
         );
 
         // /setHome <name> - Set a home
-        dispatcher.register(literal("setHome")
-                .requires(source -> source.getPlayer() != null)
-                .then(argument("homeName", StringArgumentType.word())
-                        .executes(context -> executeSetHome(context, dbManager)))
-        );
+        String[] setHomeAliases = {"setHome", "sethome"};
+        for (String alias : setHomeAliases) {
+            dispatcher.register(literal(alias)
+                    .requires(source -> source.getPlayer() != null)
+                    .then(argument("homeName", StringArgumentType.word())
+                            .executes(context -> executeSetHome(context, dbManager)))
+            );
+        }
 
         // /delHome <name> - Delete a home
-        dispatcher.register(literal("delHome")
-                .requires(source -> source.getPlayer() != null)
-                .then(argument("homeName", StringArgumentType.word())
-                        .suggests(homeSuggestions(dbManager))
-                        .executes(context -> executeDeleteHome(context, dbManager)))
-        );
+        String[] delHomeAliases = {"delHome", "delhome", "deleteHome"};
+        for (String alias : delHomeAliases) {
+            dispatcher.register(literal(alias)
+                    .requires(source -> source.getPlayer() != null)
+                    .then(argument("homeName", StringArgumentType.word())
+                            .suggests(homeSuggestions(dbManager))
+                            .executes(context -> executeDeleteHome(context, dbManager)))
+            );
+        }
     }
 
    private static int executeTeleportHome(CommandContext<ServerCommandSource> context, DatabaseManager dbManager) {
