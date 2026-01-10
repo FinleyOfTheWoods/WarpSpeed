@@ -135,7 +135,11 @@ public class TpxCommand {
             ServerPlayerEntity player = source.getPlayerOrThrow();
             String targetPlayerName = StringArgumentType.getString(context, "target");
 
-            ServerPlayerEntity target = context.getSource().getWorld().getPlayers( playerEntity -> String.valueOf(playerEntity.getName().getString()).equals(targetPlayerName)).getFirst();
+            ServerPlayerEntity target = context.getSource().getServer().getPlayerManager().getPlayer(targetPlayerName);
+            if (target == null) {
+                player.sendMessage(Text.literal("§o§cPlayer not found: " + targetPlayerName));
+                return 0;
+            }
 
             if (player.getUuid().equals(target.getUuid())) {
                 player.sendMessage(Text.literal("§o§cCan't teleport to yourself."), false);
@@ -149,20 +153,20 @@ public class TpxCommand {
 
                 //for some fucking reason player and target are swapped... this will play the sound on the target's side
                 player.playSound(SoundEvents.ENTITY_EXPERIENCE_ORB_PICKUP, 2f, 0.7f );
-                return 1;
-            } else {
                 return 0;
+            } else {
+                return 1;
             }
         } catch (TpxRequestAlreadyExistsException | TpxNotAllowedException | TpxRequestNotFoundException | NoSuchElementException | CommandSyntaxException  e) {
             LOGGER.debug("Request failed", e);
             Optional<ServerPlayerEntity> sender = Optional.ofNullable(context.getSource().getPlayer());
             sender.ifPresent(player -> player.sendMessage(Text.literal("§o§c An error has occured: " + e.getMessage()), false));
-            return 0;
+            return 1;
         } catch (Exception e) {
             LOGGER.error("Unexpected Exception: Failed to execute /tpa command", e);
             Optional<ServerPlayerEntity> sender = Optional.ofNullable(context.getSource().getPlayer());
             sender.ifPresent(player -> player.sendMessage(Text.literal("§o§c An unknown error has occured."), false));
-            return 0;
+            return 1;
         }
    }
 
@@ -172,8 +176,11 @@ public class TpxCommand {
             ServerPlayerEntity player = source.getPlayerOrThrow();
             String targetPlayerName = StringArgumentType.getString(context, "target");
 
-            ServerPlayerEntity target = context.getSource().getWorld().getPlayers( playerEntity -> String.valueOf(playerEntity.getName().getString()).equals(targetPlayerName)).getFirst();
-
+            ServerPlayerEntity target = context.getSource().getServer().getPlayerManager().getPlayer(targetPlayerName);
+            if (target == null) {
+                player.sendMessage(Text.literal("§o§cPlayer not found: " + targetPlayerName));
+                return 0;
+            }
             boolean success = TpxRequestManager.makeSingleTargetToSenderRequest(new SingleTargetToSingleSenderRequest(player, target), dbManager);
 
             if (success) {
@@ -205,8 +212,11 @@ public class TpxCommand {
             ServerPlayerEntity player = source.getPlayerOrThrow();
             String targetPlayerName = StringArgumentType.getString(context, "target");
 
-            ServerPlayerEntity target = context.getSource().getWorld().getPlayers( playerEntity -> String.valueOf(playerEntity.getName().getString()).equals(targetPlayerName)).getFirst();
-
+            ServerPlayerEntity target = context.getSource().getServer().getPlayerManager().getPlayer(targetPlayerName);
+            if (target == null) {
+                player.sendMessage(Text.literal("§o§cPlayer not found: " + targetPlayerName));
+                return 0;
+            }
             boolean success = TpxRequestManager.makeSingleTargetToPrivilegedSenderRequest(new SingleTargetToPrivilegedSenderRequest(player, target));
             if (success) {
                 return 1;
