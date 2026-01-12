@@ -67,7 +67,7 @@ public class WarpCommand {
         String remaining = builder.getRemaining().toLowerCase();
 
         for (String candidate : candidates) {
-            if (candidate.toLowerCase().startsWith(remaining)) {
+            if (candidate.toLowerCase().contains(remaining)) {
                 builder.suggest(candidate);
             }
         }

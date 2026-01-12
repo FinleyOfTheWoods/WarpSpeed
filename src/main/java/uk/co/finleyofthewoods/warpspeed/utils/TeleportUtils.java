@@ -123,7 +123,7 @@ public class TeleportUtils {
             return false;
         }
         try {
-            if (!PlayerLocationTracker.hasPreviousLocation(player)) {
+            if (PlayerLocationTracker.noPreviousLocation(player)) {
                 LOGGER.debug("[{}] Failed to teleport {} to last location: no previous location found", MOD_ID, player.getName().toString());
                 player.sendMessage(Text.literal("§cNo previous location found"), true);
                 return false;

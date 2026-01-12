@@ -13,7 +13,7 @@ public class ServerPlayerEntityMixin {
     @Inject(method = "onDeath", at = @At("HEAD"))
     private void onPlayerDeath(DamageSource source, CallbackInfo ci) {
         ServerPlayerEntity player = (ServerPlayerEntity) (Object) this;
-        PlayerLocationTracker.storeDeathLocation(player);
+        PlayerLocationTracker.storeCurrentLocation(player);
     }
 
     @Inject(method = "onDisconnect", at = @At("HEAD"))

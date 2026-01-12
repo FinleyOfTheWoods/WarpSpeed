@@ -57,7 +57,7 @@ public class TpxCommand {
         for (ServerPlayerEntity candidate : candidates) {
             if (!candidate.isInvisibleTo(sender) && candidate.getName() != null) {
                 String candidateName = candidate.getName().getString();
-                if (candidateName.toLowerCase().startsWith(remaining)) {
+                if (candidateName.toLowerCase().contains(remaining)) {
                     builder.suggest(candidateName);
                 }
             }
