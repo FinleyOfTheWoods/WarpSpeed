@@ -434,7 +434,6 @@ public class TeleportUtils {
     }
 
     private static BlockPos findSafeLocation(World world, BlockPos pos, ServerPlayerEntity player, boolean isBackCommand) throws NoSafeLocationFoundException {
-        LOGGER.error("{}", CONFIG.toString());
         if (isSafeLocation(world, pos, player, isBackCommand)) return pos;
         BlockPos safePOS;
         int searchRadius = 10;
