@@ -13,15 +13,7 @@
   "icon": "assets/warpspeed/icon.png",
   "environment": "*",
   "entrypoints": {
-    "fabric-datagen": [
-      "uk.co.finleyofthewoods.warpspeed.client.WarpspeedDataGenerator"
-    ],
-    "main": [
-      "uk.co.finleyofthewoods.warpspeed.Warpspeed"
-    ],
-    "client": [
-      "uk.co.finleyofthewoods.warpspeed.WarpspeedClient"
-    ]
+    "main": ["uk.co.finleyofthewoods.warpspeed.Warpspeed"]
   },
   "mixins": [
     "warpspeed.mixins.json"
