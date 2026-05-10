@@ -16,13 +16,13 @@ import uk.co.finleyofthewoods.warpspeed.manager.impl.TeleportManagerImpl;
 import static net.minecraft.commands.Commands.literal;
 
 @Slf4j
-public class RTPCommand {
+public class BackCommand {
     private static final TeleportManager teleportManager = new TeleportManagerImpl();
     private static final LocationManagerImpl locationManager = new LocationManagerImpl();
 
     public static void register(CommandDispatcher<CommandSourceStack> dispatcher) {
-        dispatcher.register(literal("rtp")
-                .executes(RTPCommand::execute));
+        dispatcher.register(literal("back")
+                .executes(BackCommand::execute));
     }
 
     private static int execute(CommandContext<CommandSourceStack> context) {
@@ -34,18 +34,19 @@ public class RTPCommand {
                         .withStyle(ChatFormatting.RED));
                 return 1;
             }
-            BlockPos currentPos = player.getOnPos().above();
-            if (teleportManager.teleportRandomly(player)) {
+            BlockPos currentPos = player.getOnPos();
+            if (teleportManager.teleportBack(player)) {
                 locationManager.setPreviousLocation(player, currentPos);
-                player.sendSystemMessage(Component.literal("Successfully teleported randomly")
+                player.sendSystemMessage(Component.literal("Teleported to previous location")
                         .withStyle(ChatFormatting.GREEN), true);
+                return 0;
             } else {
-                player.sendSystemMessage(Component.literal("Failed to teleport randomly")
+                player.sendSystemMessage(Component.literal("Failed to teleport to previous location")
                         .withStyle(ChatFormatting.RED), true);
+                return 1;
             }
-            return 0;
         } catch (Exception e) {
-            log.error("Failed to execute rtp command", e);
+            log.error("Failed to execute back command", e);
             return 1;
         }
     }

@@ -5,10 +5,12 @@ import com.mojang.brigadier.context.CommandContext;
 import lombok.extern.slf4j.Slf4j;
 import net.minecraft.ChatFormatting;
 import net.minecraft.commands.CommandSourceStack;
+import net.minecraft.core.BlockPos;
 import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerPlayer;
 import uk.co.finleyofthewoods.warpspeed.command.utils.ContextHelper;
 import uk.co.finleyofthewoods.warpspeed.manager.TeleportManager;
+import uk.co.finleyofthewoods.warpspeed.manager.impl.LocationManagerImpl;
 import uk.co.finleyofthewoods.warpspeed.manager.impl.TeleportManagerImpl;
 
 import static net.minecraft.commands.Commands.literal;
@@ -16,6 +18,8 @@ import static net.minecraft.commands.Commands.literal;
 @Slf4j
 public class SpawnCommand {
     private static final TeleportManager teleportManager = new TeleportManagerImpl();
+    private static final LocationManagerImpl locationManager = new LocationManagerImpl();
+
     public static void register(CommandDispatcher<CommandSourceStack> dispatcher) {
         dispatcher.register(literal("spawn")
                 .executes(SpawnCommand::execute));
@@ -30,7 +34,9 @@ public class SpawnCommand {
                         .withStyle(ChatFormatting.RED));
                 return 1;
             }
+            BlockPos currentPos = player.getOnPos().above();
             if (teleportManager.teleportSpawn(player)) {
+                locationManager.setPreviousLocation(player, currentPos);
                 player.sendSystemMessage(Component.literal("Teleported to spawn")
                         .withStyle(ChatFormatting.GREEN), true);
                 return 0;

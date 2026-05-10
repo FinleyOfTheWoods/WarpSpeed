@@ -1,8 +1,10 @@
 package uk.co.finleyofthewoods.warpspeed.manager;
 
+import net.minecraft.core.BlockPos;
 import net.minecraft.server.level.ServerPlayer;
 import org.jspecify.annotations.NonNull;
 import org.jspecify.annotations.Nullable;
+import uk.co.finleyofthewoods.warpspeed.model.BaseLocation;
 import uk.co.finleyofthewoods.warpspeed.model.HomeLocation;
 import uk.co.finleyofthewoods.warpspeed.model.WarpLocation;
 
@@ -26,4 +28,10 @@ public interface LocationManager {
     boolean insertWarpLocation(@NonNull ServerPlayer player, @NonNull String name, boolean isPrivate);
 
     boolean deleteWarpLocation(@NonNull ServerPlayer player, @NonNull String name);
+
+    void setPreviousLocation(@NonNull ServerPlayer player, @NonNull BlockPos pos);
+
+    @Nullable BaseLocation getPreviousLocation(@NonNull ServerPlayer player);
+
+    void clearPreviousLocations(@NonNull ServerPlayer player);
 }

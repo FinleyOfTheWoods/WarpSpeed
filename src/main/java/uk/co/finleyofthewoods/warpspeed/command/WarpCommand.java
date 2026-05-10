@@ -8,6 +8,7 @@ import com.mojang.brigadier.exceptions.CommandSyntaxException;
 import lombok.extern.slf4j.Slf4j;
 import net.minecraft.ChatFormatting;
 import net.minecraft.commands.CommandSourceStack;
+import net.minecraft.core.BlockPos;
 import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerPlayer;
 import uk.co.finleyofthewoods.warpspeed.command.utils.ContextHelper;
@@ -54,7 +55,9 @@ public class WarpCommand {
                         .withStyle(ChatFormatting.RED), true);
                 return 1;
             }
+            BlockPos currentPos = player.getOnPos().above();
             if (teleportManager.teleportWarp(player, name)) {
+                locationManager.setPreviousLocation(player, currentPos);
                 player.sendSystemMessage(Component.literal("Teleported to warp " + name)
                         .withStyle(ChatFormatting.GREEN), true);
                 return 0;

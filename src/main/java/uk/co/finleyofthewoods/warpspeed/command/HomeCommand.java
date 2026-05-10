@@ -7,6 +7,7 @@ import com.mojang.brigadier.exceptions.CommandSyntaxException;
 import lombok.extern.slf4j.Slf4j;
 import net.minecraft.ChatFormatting;
 import net.minecraft.commands.CommandSourceStack;
+import net.minecraft.core.BlockPos;
 import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerPlayer;
 import uk.co.finleyofthewoods.warpspeed.command.utils.ContextHelper;
@@ -58,7 +59,9 @@ public class HomeCommand {
                 return 1;
             }
             log.debug("Teleporting player {} to home {}", player.getPlainTextName(), name);
+            BlockPos currentPos = player.getOnPos().above();
             if (teleportManager.teleportHome(player, name)) {
+                locationManager.setPreviousLocation(player, currentPos);
                 player.sendSystemMessage(Component.literal("Teleported to home " + name)
                         .withStyle(ChatFormatting.GREEN), true);
                 return 0;

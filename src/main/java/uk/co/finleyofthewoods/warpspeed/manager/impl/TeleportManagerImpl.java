@@ -220,4 +220,16 @@ public class TeleportManagerImpl implements TeleportManager {
         ServerLevel level = player.level();
         return attemptRandomTeleport(player, level, new Random(), 0);
     }
+
+    @Override
+    public boolean teleportBack(@NonNull ServerPlayer player) {
+        BaseLocation location = locationManager.getPreviousLocation(player);
+        if (location == null) {
+            log.debug("No previous location found for player {}", player.getPlainTextName());
+            player.sendSystemMessage(Component.literal("No previous location found")
+                    .withStyle(ChatFormatting.RED), true);
+            return false;
+        }
+        return teleport(player, location);
+    }
 }

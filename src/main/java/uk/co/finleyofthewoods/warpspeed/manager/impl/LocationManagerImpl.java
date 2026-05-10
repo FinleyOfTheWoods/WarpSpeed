@@ -10,14 +10,20 @@ import net.minecraft.server.level.ServerPlayer.RespawnConfig;
 import net.minecraft.world.level.Level;
 import org.jspecify.annotations.NonNull;
 import org.jspecify.annotations.Nullable;
+import uk.co.finleyofthewoods.warpspeed.model.BaseLocation;
 import uk.co.finleyofthewoods.warpspeed.model.HomeLocation;
 import uk.co.finleyofthewoods.warpspeed.model.WarpLocation;
 
 import java.util.List;
+import java.util.Map;
+import java.util.UUID;
+import java.util.concurrent.ConcurrentHashMap;
 
 @Slf4j
 public class LocationManagerImpl implements uk.co.finleyofthewoods.warpspeed.manager.LocationManager {
     private static final DatabaseManagerImpl databaseManager = new DatabaseManagerImpl();
+
+    private static final Map<UUID, BaseLocation> previousLocations = new ConcurrentHashMap<>();
 
     @Override
     public @Nullable HomeLocation getBedLocation(@NonNull ServerPlayer player) {
@@ -46,7 +52,7 @@ public class LocationManagerImpl implements uk.co.finleyofthewoods.warpspeed.man
 
     @Override
     public boolean insertHomeLocation(@NonNull ServerPlayer player, @NonNull String name) {
-        HomeLocation home = new HomeLocation(player.getUUID(), name, player.getOnPos(), player.level());
+        HomeLocation home = new HomeLocation(player.getUUID(), name, player.getOnPos().above(), player.level());
         return databaseManager.insertHomeLocation(home);
     }
 
@@ -71,12 +77,34 @@ public class LocationManagerImpl implements uk.co.finleyofthewoods.warpspeed.man
 
     @Override
     public boolean insertWarpLocation(@NonNull ServerPlayer player, @NonNull String name, boolean isPrivate) {
-        WarpLocation location = new WarpLocation(player.getUUID(), name, isPrivate, player.getOnPos(), player.level());
+        WarpLocation location = new WarpLocation(player.getUUID(), name, isPrivate, player.getOnPos().above(), player.level());
         return databaseManager.insertWarpLocation(location);
     }
 
     @Override
     public boolean deleteWarpLocation(@NonNull ServerPlayer player, @NonNull String name) {
         return databaseManager.deleteWarpLocation(player, name);
+    }
+
+    @Override
+    public void setPreviousLocation(@NonNull ServerPlayer player, @NonNull BlockPos pos) {
+        log.debug("setting previous location for {} at {}", player.getPlainTextName(), pos);
+        ServerLevel level = player.level();
+        BaseLocation previousLocation = new BaseLocation(player.getUUID(), pos, level);
+        if (previousLocations.containsKey(player.getUUID())) {
+            previousLocations.replace(player.getUUID(), previousLocation);
+        } else {
+            previousLocations.put(player.getUUID(), previousLocation);
+        }
+    }
+
+    @Override
+    public @Nullable BaseLocation getPreviousLocation(@NonNull ServerPlayer player) {
+        return previousLocations.get(player.getUUID());
+    }
+
+    @Override
+    public void clearPreviousLocations(@NonNull ServerPlayer player) {
+        previousLocations.remove(player.getUUID());
     }
 }
