@@ -6,6 +6,7 @@ import net.fabricmc.fabric.api.command.v2.CommandRegistrationCallback;
 import net.fabricmc.loader.api.FabricLoader;
 import net.fabricmc.loader.api.ModContainer;
 import uk.co.finleyofthewoods.warpspeed.command.HomeCommand;
+import uk.co.finleyofthewoods.warpspeed.command.RTPCommand;
 import uk.co.finleyofthewoods.warpspeed.command.SpawnCommand;
 import uk.co.finleyofthewoods.warpspeed.command.WarpCommand;
 import uk.co.finleyofthewoods.warpspeed.manager.impl.DatabaseManagerImpl;
@@ -31,6 +32,7 @@ public class Warpspeed implements ModInitializer {
                 HomeCommand.register(dispatcher);
                 SpawnCommand.register(dispatcher);
                 WarpCommand.register(dispatcher);
+                RTPCommand.register(dispatcher);
             });
         }
         catch (Exception e) {

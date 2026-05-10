@@ -7,4 +7,5 @@ public interface TeleportManager {
     boolean teleportHome(@NonNull ServerPlayer player, @NonNull String name);
     boolean teleportSpawn(@NonNull ServerPlayer player);
     boolean teleportWarp(@NonNull ServerPlayer player, @NonNull String name);
+    boolean teleportRandomly(@NonNull ServerPlayer player);
 }
