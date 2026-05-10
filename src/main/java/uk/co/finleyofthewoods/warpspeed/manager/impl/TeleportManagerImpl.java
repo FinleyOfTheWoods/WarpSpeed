@@ -23,7 +23,7 @@ public class TeleportManagerImpl implements TeleportManager {
     private boolean teleport(@NonNull ServerPlayer player, @NonNull HomeLocation location) {
         try {
             log.debug("Teleporting {} to home {} ({})", player.getDisplayName(), location.getName(), location.getPos());
-            ServerLevel level = player.level();
+            ServerLevel level = location.getLevel();
             BlockPos pos = location.getPos();
             return teleportPlayerToPosition(player, pos, level);
         } catch (TeleportFailureException e ){
@@ -38,7 +38,7 @@ public class TeleportManagerImpl implements TeleportManager {
     private boolean teleport(@NonNull ServerPlayer player, @NonNull BaseLocation location) {
         try {
             log.debug("Teleporting {} to {}", player.getDisplayName(), location.getPos());
-            ServerLevel level = player.level();
+            ServerLevel level = location.getLevel();
             BlockPos pos = location.getPos();
             return teleportPlayerToPosition(player, pos, level);
         } catch (TeleportFailureException e ){
@@ -53,7 +53,7 @@ public class TeleportManagerImpl implements TeleportManager {
     private boolean teleport(@NonNull ServerPlayer player, @NonNull WarpLocation location) {
         try {
             log.debug("Teleporting {} to warp {} ({})", player.getDisplayName(), location.getName(), location.getPos());
-            ServerLevel level = player.level();
+            ServerLevel level = location.getLevel();
             BlockPos pos = location.getPos();
             return teleportPlayerToPosition(player, pos, level);
         } catch (TeleportFailureException e ){
@@ -66,7 +66,7 @@ public class TeleportManagerImpl implements TeleportManager {
     }
 
     private boolean teleportPlayerToPosition(@NonNull ServerPlayer player, @NonNull BlockPos pos, @NonNull ServerLevel level) throws TeleportFailureException {
-        TeleportTransition transition = new TeleportTransition(
+       TeleportTransition transition = new TeleportTransition(
                 level,
                 new Vec3(pos.getX() + 0.5, pos.getY(), pos.getZ() + 0.5),
                 new Vec3(0, 0, 0),
@@ -89,7 +89,12 @@ public class TeleportManagerImpl implements TeleportManager {
 
     @Override
     public boolean teleportHome(@NonNull ServerPlayer player, @NonNull String name) {
-        HomeLocation location = locationManager.getHomeLocationByName(player, name);
+        HomeLocation location;
+        if (name.equals("bed")) {
+            location = locationManager.getBedLocation(player);
+        } else {
+            location = locationManager.getHomeLocationByName(player, name);
+        }
         if (location == null) {
             log.debug("Home location {} not found for player {}", name, player.getPlainTextName());
             player.sendSystemMessage(Component.literal("Home location not found").withStyle(ChatFormatting.RED), true);
