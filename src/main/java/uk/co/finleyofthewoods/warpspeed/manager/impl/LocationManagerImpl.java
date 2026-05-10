@@ -1,7 +1,6 @@
 package uk.co.finleyofthewoods.warpspeed.manager.impl;
 
 import lombok.extern.slf4j.Slf4j;
-import net.fabricmc.loader.api.FabricLoader;
 import net.minecraft.core.BlockPos;
 import net.minecraft.resources.ResourceKey;
 import net.minecraft.server.MinecraftServer;
@@ -22,12 +21,14 @@ public class LocationManagerImpl {
     public @Nullable HomeLocation getBedLocation(@NonNull ServerPlayer player) {
         RespawnConfig respawnConfig = player.getRespawnConfig();
         if (respawnConfig == null) {
+            log.debug("Respawn config is null for {}", player.getPlainTextName());
             return null;
         }
         BlockPos pos = respawnConfig.respawnData().pos().above();
         ResourceKey<Level> dimension = respawnConfig.respawnData().dimension();
         MinecraftServer server = player.level().getServer();
         ServerLevel bedLevel = server.getLevel(dimension);
+        log.debug("{} respawn location: {} {}", player.getPlainTextName(), dimension, pos);
         return new HomeLocation(player.getUUID(), "bed", pos, bedLevel);
     }
 
