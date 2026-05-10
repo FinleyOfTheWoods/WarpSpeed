@@ -116,4 +116,15 @@ public class TeleportManagerImpl implements TeleportManager {
         BaseLocation location = new BaseLocation(null, pos, spawnLevel);
         return teleport(player, location);
     }
+
+    @Override
+    public boolean teleportWarp(@NonNull ServerPlayer player, @NonNull String name) {
+        WarpLocation location = locationManager.getWarpLocationByName(player, name);
+        if (location == null) {
+            log.debug("Warp location {} not found for player {}", name, player.getPlainTextName());
+            player.sendSystemMessage(Component.literal("Warp location not found").withStyle(ChatFormatting.RED), true);
+            return false;
+        }
+        return teleport(player, location);
+    }
 }

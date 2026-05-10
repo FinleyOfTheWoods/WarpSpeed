@@ -32,7 +32,7 @@ public class DatabaseManagerImpl implements uk.co.finleyofthewoods.warpspeed.man
     private static final String DELETE_HOME_LOCATION_SQL = "DELETE FROM homes WHERE player_uuid = ? AND home_name = ? LIMIT 1";
     // SQL statements for warp locations
     private static final String INSERT_WARP_LOCATION_SQL = "INSERT INTO warps (player_uuid, warp_name, world_id, x, y, z, is_private, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)";
-    private static final String GET_WARP_LOCATION_SQL = "SELECT count(*) FROM warps WHERE warp_name = ? LIMIT 1";
+    private static final String GET_WARP_LOCATION_SQL = "SELECT * FROM warps WHERE warp_name = ? LIMIT 1";
     private static final String GET_ALL_WARP_LOCATIONS_SQL = "SELECT warp_name FROM warps WHERE is_private = 0 OR player_uuid = ? ORDER BY warp_name";
     private static final String GET_PLAYER_OWNED_LOCATIONS = "SELECT warp_name FROM warps WHERE player_uuid = ? ORDER BY warp_name";
     private static final String DELETE_WARP_LOCATION_SQL = "DELETE FROM warps WHERE warp_name = ? AND player_uuid = ? LIMIT 1";
@@ -128,7 +128,7 @@ public class DatabaseManagerImpl implements uk.co.finleyofthewoods.warpspeed.man
     }
 
     @Override
-    public @Nullable HomeLocation getHomeLocation(@NonNull ServerPlayer player, @NonNull String homeName) {
+    public @Nullable HomeLocation getHomeLocationByName(@NonNull ServerPlayer player, @NonNull String homeName) {
         log.debug("getting home location named {} for {}", homeName, player.getPlainTextName());
         try (Connection connection = connect()) {
             if (connection == null) {
@@ -152,7 +152,7 @@ public class DatabaseManagerImpl implements uk.co.finleyofthewoods.warpspeed.man
     }
 
     @Override
-    public List<HomeLocation> getAllHomeLocations(ServerPlayer player) {
+    public List<HomeLocation> getHomeLocationsByPlayerId(ServerPlayer player) {
         log.debug("getting all home locations for {}", player.getPlainTextName());
         try (Connection connection = connect()) {
             if (connection == null) {
@@ -208,11 +208,13 @@ public class DatabaseManagerImpl implements uk.co.finleyofthewoods.warpspeed.man
             PreparedStatement stmt = connection.prepareStatement(INSERT_WARP_LOCATION_SQL);
             stmt.setString(1, location.getUuid().toString());
             stmt.setString(2, location.getName());
-            stmt.setString(3, location.getLevel().dimension().registry().toString());
+            stmt.setString(3, location.getLevel().dimension().identifier().toString());
             stmt.setInt(4, location.getPos().getX());
             stmt.setInt(5, location.getPos().getY());
             stmt.setInt(6, location.getPos().getZ());
             stmt.setInt(7, location.isPrivate() ? 1 : 0);
+            stmt.setLong(8, System.currentTimeMillis());
+            stmt.executeUpdate();
             return true;
         } catch (Exception e) {
             log.error("Failed to insert warp location", e);
@@ -240,6 +242,10 @@ public class DatabaseManagerImpl implements uk.co.finleyofthewoods.warpspeed.man
                 int y = rs.getInt("y");
                 int z = rs.getInt("z");
                 boolean isPrivate = rs.getBoolean("is_private");
+                if (isPrivate && !player.getUUID().equals(uuid)) {
+                    log.debug("Player {} is trying to access private warp location {}", player.getPlainTextName(), warpName);
+                    return null;
+                }
                 return new WarpLocation(uuid, warpName, isPrivate, new BlockPos(x, y, z), getServerLevel(server, level));
             }
             return null;

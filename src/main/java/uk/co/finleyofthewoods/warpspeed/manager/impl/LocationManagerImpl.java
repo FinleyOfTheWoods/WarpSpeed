@@ -11,6 +11,7 @@ import net.minecraft.world.level.Level;
 import org.jspecify.annotations.NonNull;
 import org.jspecify.annotations.Nullable;
 import uk.co.finleyofthewoods.warpspeed.model.HomeLocation;
+import uk.co.finleyofthewoods.warpspeed.model.WarpLocation;
 
 import java.util.List;
 
@@ -35,16 +36,16 @@ public class LocationManagerImpl implements uk.co.finleyofthewoods.warpspeed.man
 
     @Override
     public @Nullable HomeLocation getHomeLocationByName(@NonNull ServerPlayer player, @NonNull String name) {
-        return databaseManager.getHomeLocation(player, name);
+        return databaseManager.getHomeLocationByName(player, name);
     }
 
     @Override
     public @Nullable List<HomeLocation> getHomeLocationsByPlayerId(@NonNull ServerPlayer player) {
-        return databaseManager.getAllHomeLocations(player);
+        return databaseManager.getHomeLocationsByPlayerId(player);
     }
 
     @Override
-    public boolean createHomeLocation(@NonNull ServerPlayer player, @NonNull String name) {
+    public boolean insertHomeLocation(@NonNull ServerPlayer player, @NonNull String name) {
         HomeLocation home = new HomeLocation(player.getUUID(), name, player.getOnPos(), player.level());
         return databaseManager.insertHomeLocation(home);
     }
@@ -52,5 +53,30 @@ public class LocationManagerImpl implements uk.co.finleyofthewoods.warpspeed.man
     @Override
     public boolean deleteHomeLocation(@NonNull ServerPlayer player, @NonNull String name) {
         return databaseManager.deleteHomeLocation(player, name);
+    }
+
+    @Override
+    public @Nullable WarpLocation getWarpLocationByName(@NonNull ServerPlayer player, @NonNull String name) {
+        return databaseManager.getWarpLocation(player, name);
+    }
+
+    public @Nullable List<WarpLocation> getAllWarpLocations(@NonNull ServerPlayer player) {
+        return databaseManager.getAllWarpLocations(player);
+    }
+
+    @Override
+    public @Nullable List<WarpLocation> getPlayerOwnedLocations(@NonNull ServerPlayer player) {
+        return databaseManager.getPlayerOwnedLocations(player);
+    }
+
+    @Override
+    public boolean insertWarpLocation(@NonNull ServerPlayer player, @NonNull String name, boolean isPrivate) {
+        WarpLocation location = new WarpLocation(player.getUUID(), name, isPrivate, player.getOnPos(), player.level());
+        return databaseManager.insertWarpLocation(location);
+    }
+
+    @Override
+    public boolean deleteWarpLocation(@NonNull ServerPlayer player, @NonNull String name) {
+        return databaseManager.deleteWarpLocation(player, name);
     }
 }

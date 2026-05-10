@@ -14,9 +14,9 @@ public interface DatabaseManager {
 
     boolean insertHomeLocation(HomeLocation homeLocation);
 
-    @Nullable HomeLocation getHomeLocation(@NonNull ServerPlayer player, @NonNull String homeName);
+    @Nullable HomeLocation getHomeLocationByName(@NonNull ServerPlayer player, @NonNull String homeName);
 
-    List<HomeLocation> getAllHomeLocations(ServerPlayer player);
+    List<HomeLocation> getHomeLocationsByPlayerId(ServerPlayer player);
 
     boolean deleteHomeLocation(ServerPlayer player, String homeName);
 

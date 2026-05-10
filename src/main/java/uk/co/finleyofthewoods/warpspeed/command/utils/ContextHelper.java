@@ -1,5 +1,6 @@
 package uk.co.finleyofthewoods.warpspeed.command.utils;
 
+import com.mojang.brigadier.arguments.BoolArgumentType;
 import com.mojang.brigadier.arguments.StringArgumentType;
 import com.mojang.brigadier.context.CommandContext;
 import com.mojang.brigadier.exceptions.CommandSyntaxException;
@@ -22,9 +23,11 @@ public class ContextHelper {
     }
 
     public static @Nullable String getStringFromContext(@NonNull CommandContext<CommandSourceStack> context, String key) {
-        String value = StringArgumentType.getString(context, key);
-        log.debug("returning string from context: {}", value);
-        return value;
+        return StringArgumentType.getString(context, key);
+    }
+
+    public static boolean getBooleanFromContext(@NonNull CommandContext<CommandSourceStack> context, String key) {
+        return BoolArgumentType.getBool(context, key);
     }
 
     public static @Nullable ServerPlayer getPlayerFromContext(@NonNull CommandSourceStack source) throws CommandSyntaxException {
