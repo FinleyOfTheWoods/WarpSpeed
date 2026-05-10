@@ -11,7 +11,7 @@
   "contact": {},
   "license": "MPL-2.0",
   "icon": "assets/warpspeed/icon.png",
-  "environment": "*",
+  "environment": "server",
   "entrypoints": {
     "main": ["uk.co.finleyofthewoods.warpspeed.Warpspeed"]
   },
@@ -20,7 +20,7 @@
   ],
   "depends": {
     "fabricloader": ">=${loader_version}",
-    "fabric": "*",
+    "fabric-api": "*",
     "minecraft": ">=${minecraft_version}"
   }
 }

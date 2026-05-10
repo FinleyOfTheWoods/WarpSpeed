@@ -28,6 +28,8 @@ dependencies {
 
     implementation "net.fabricmc.fabric-api:fabric-api:${project.fabric_version}"
 
+    include(implementation('org.xerial:sqlite-jdbc:3.46.0.0'))
+
     compileOnly("org.projectlombok:lombok:1.18.44")
     annotationProcessor("org.projectlombok:lombok:1.18.44")
 
