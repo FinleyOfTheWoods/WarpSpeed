@@ -5,4 +5,5 @@ import org.jspecify.annotations.NonNull;
 
 public interface TeleportManager {
     boolean teleportHome(@NonNull ServerPlayer player, @NonNull String name);
+    boolean teleportSpawn(@NonNull ServerPlayer player);
 }

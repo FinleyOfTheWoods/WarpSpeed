@@ -6,6 +6,7 @@ import net.fabricmc.fabric.api.command.v2.CommandRegistrationCallback;
 import net.fabricmc.loader.api.FabricLoader;
 import net.fabricmc.loader.api.ModContainer;
 import uk.co.finleyofthewoods.warpspeed.command.HomeCommand;
+import uk.co.finleyofthewoods.warpspeed.command.SpawnCommand;
 import uk.co.finleyofthewoods.warpspeed.manager.impl.DatabaseManagerImpl;
 
 @Slf4j
@@ -27,6 +28,7 @@ public class Warpspeed implements ModInitializer {
             CommandRegistrationCallback.EVENT.register((dispatcher, context, selection) -> {
                 log.info("Registering {} commands", MOD_NAME);
                 HomeCommand.register(dispatcher);
+                SpawnCommand.register(dispatcher);
             });
         }
         catch (Exception e) {

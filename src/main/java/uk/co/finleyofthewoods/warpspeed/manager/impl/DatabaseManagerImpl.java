@@ -22,7 +22,7 @@ import java.util.List;
 import java.util.UUID;
 
 @Slf4j
-public class DatabaseManagerImpl {
+public class DatabaseManagerImpl implements uk.co.finleyofthewoods.warpspeed.manager.DatabaseManager {
     private final File DB_FILE = FabricLoader.getInstance().getConfigDir().resolve("warpspeed/warp_points.db").toFile();
 
     // SQL statements for home locations
@@ -44,7 +44,7 @@ public class DatabaseManagerImpl {
     private static final String BLOCK_LIST_SQL = "CREATE TABLE IF NOT EXISTS blocklist (id INTEGER PRIMARY KEY AUTOINCREMENT, blocker_player_username TEXT NOT NULL, blocked_player_username TEXT NOT NULL, created_at INTEGER NOT NULL, UNIQUE(blocker_player_username, blocked_player_username));";
     private static final String BLOCK_LIST_INDEX_SQL = "CREATE INDEX IF NOT EXISTS idx_blocklist_player ON blocklist(blocker_player_username);";
 
-    private Connection connect() {
+    public Connection connect() {
         log.debug("connecting to database");
         try {
             Connection connection = DriverManager.getConnection("jdbc:sqlite:" + DB_FILE);
@@ -62,6 +62,7 @@ public class DatabaseManagerImpl {
         }
     }
 
+    @Override
     public void initialise() throws SQLException {
         log.debug("initialising database");
         File parentDir = DB_FILE.getParentFile();
@@ -103,6 +104,7 @@ public class DatabaseManagerImpl {
         }
     }
 
+    @Override
     public boolean insertHomeLocation(HomeLocation homeLocation) {
         log.debug("inserting home location {}", homeLocation);
         try (Connection connection = connect()) {
@@ -125,6 +127,7 @@ public class DatabaseManagerImpl {
         }
     }
 
+    @Override
     public @Nullable HomeLocation getHomeLocation(@NonNull ServerPlayer player, @NonNull String homeName) {
         log.debug("getting home location named {} for {}", homeName, player.getPlainTextName());
         try (Connection connection = connect()) {
@@ -148,6 +151,7 @@ public class DatabaseManagerImpl {
         }
     }
 
+    @Override
     public List<HomeLocation> getAllHomeLocations(ServerPlayer player) {
         log.debug("getting all home locations for {}", player.getPlainTextName());
         try (Connection connection = connect()) {
@@ -171,6 +175,7 @@ public class DatabaseManagerImpl {
         }
     }
 
+    @Override
     public boolean deleteHomeLocation(ServerPlayer player, String homeName) {
         log.debug("deleting home location named {} for {}", homeName, player.getPlainTextName());
         try (Connection connection = connect()) {
@@ -193,6 +198,7 @@ public class DatabaseManagerImpl {
         }
     }
 
+    @Override
     public boolean insertWarpLocation(WarpLocation location) {
         log.debug("inserting warp location {} at {}", location.getName(), location.getPos());
         try (Connection connection = connect()) {
@@ -214,6 +220,7 @@ public class DatabaseManagerImpl {
         }
     }
 
+    @Override
     public WarpLocation getWarpLocation(ServerPlayer player, String homeName) {
         log.debug("getting warp location named {}", homeName);
         try (Connection connection = connect()) {
@@ -242,6 +249,7 @@ public class DatabaseManagerImpl {
         }
     }
 
+    @Override
     public boolean deleteWarpLocation(ServerPlayer player, String homeName) {
         log.debug("deleting warp location named {}", homeName);
         try (Connection connection = connect()) {
@@ -259,6 +267,7 @@ public class DatabaseManagerImpl {
         }
     }
 
+    @Override
     public List<WarpLocation> getAllWarpLocations(ServerPlayer player) {
         log.debug("getting all warp locations available for {}", player.getPlainTextName());
         try (Connection connection = connect()) {
@@ -289,6 +298,7 @@ public class DatabaseManagerImpl {
         }
     }
 
+    @Override
     public List<WarpLocation> getPlayerOwnedLocations(ServerPlayer player) {
         log.debug("getting all warp locations owned by {}", player.getPlainTextName());
         try (Connection connection = connect()) {

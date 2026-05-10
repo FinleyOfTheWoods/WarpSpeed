@@ -4,10 +4,12 @@ import lombok.extern.slf4j.Slf4j;
 import net.minecraft.ChatFormatting;
 import net.minecraft.core.BlockPos;
 import net.minecraft.network.chat.Component;
+import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.sounds.SoundEvents;
 import net.minecraft.world.level.portal.TeleportTransition;
+import net.minecraft.world.level.storage.LevelData.RespawnData;
 import net.minecraft.world.phys.Vec3;
 import org.jspecify.annotations.NonNull;
 import uk.co.finleyofthewoods.warpspeed.exception.TeleportFailureException;
@@ -100,6 +102,18 @@ public class TeleportManagerImpl implements TeleportManager {
             player.sendSystemMessage(Component.literal("Home location not found").withStyle(ChatFormatting.RED), true);
             return false;
         }
+        return teleport(player, location);
+    }
+
+    @Override
+    public boolean teleportSpawn(@NonNull ServerPlayer player) {
+        ServerLevel level = player.level();
+        MinecraftServer server = level.getServer();
+        RespawnData respawnData = server.getRespawnData();
+        BlockPos pos = respawnData.pos();
+        ServerLevel spawnLevel = server.getLevel(respawnData.dimension());
+
+        BaseLocation location = new BaseLocation(null, pos, spawnLevel);
         return teleport(player, location);
     }
 }

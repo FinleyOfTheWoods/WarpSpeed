@@ -15,9 +15,10 @@ import uk.co.finleyofthewoods.warpspeed.model.HomeLocation;
 import java.util.List;
 
 @Slf4j
-public class LocationManagerImpl {
+public class LocationManagerImpl implements uk.co.finleyofthewoods.warpspeed.manager.LocationManager {
     private static final DatabaseManagerImpl databaseManager = new DatabaseManagerImpl();
 
+    @Override
     public @Nullable HomeLocation getBedLocation(@NonNull ServerPlayer player) {
         RespawnConfig respawnConfig = player.getRespawnConfig();
         if (respawnConfig == null) {
@@ -32,19 +33,23 @@ public class LocationManagerImpl {
         return new HomeLocation(player.getUUID(), "bed", pos, bedLevel);
     }
 
+    @Override
     public @Nullable HomeLocation getHomeLocationByName(@NonNull ServerPlayer player, @NonNull String name) {
         return databaseManager.getHomeLocation(player, name);
     }
 
+    @Override
     public @Nullable List<HomeLocation> getHomeLocationsByPlayerId(@NonNull ServerPlayer player) {
         return databaseManager.getAllHomeLocations(player);
     }
 
+    @Override
     public boolean createHomeLocation(@NonNull ServerPlayer player, @NonNull String name) {
         HomeLocation home = new HomeLocation(player.getUUID(), name, player.getOnPos(), player.level());
         return databaseManager.insertHomeLocation(home);
     }
 
+    @Override
     public boolean deleteHomeLocation(@NonNull ServerPlayer player, @NonNull String name) {
         return databaseManager.deleteHomeLocation(player, name);
     }
