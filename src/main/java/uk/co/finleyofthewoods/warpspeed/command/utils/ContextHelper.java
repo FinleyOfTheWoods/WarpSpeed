@@ -6,6 +6,7 @@ import com.mojang.brigadier.context.CommandContext;
 import com.mojang.brigadier.exceptions.CommandSyntaxException;
 import lombok.extern.slf4j.Slf4j;
 import net.minecraft.commands.CommandSourceStack;
+import net.minecraft.commands.arguments.EntityArgument;
 import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerPlayer;
 import org.jspecify.annotations.NonNull;
@@ -28,6 +29,10 @@ public class ContextHelper {
 
     public static boolean getBooleanFromContext(@NonNull CommandContext<CommandSourceStack> context, String key) {
         return BoolArgumentType.getBool(context, key);
+    }
+
+    public static ServerPlayer getPlayerEntityFromContext(@NonNull CommandContext<CommandSourceStack> context, String key) throws CommandSyntaxException {
+        return EntityArgument.getPlayer(context, key);
     }
 
     public static @Nullable ServerPlayer getPlayerFromContext(@NonNull CommandSourceStack source) throws CommandSyntaxException {

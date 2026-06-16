@@ -15,7 +15,6 @@ import uk.co.finleyofthewoods.warpspeed.model.HomeLocation;
 import uk.co.finleyofthewoods.warpspeed.model.WarpLocation;
 
 import java.util.List;
-import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 
@@ -23,7 +22,7 @@ import java.util.concurrent.ConcurrentHashMap;
 public class LocationManagerImpl implements uk.co.finleyofthewoods.warpspeed.manager.LocationManager {
     private static final DatabaseManagerImpl databaseManager = new DatabaseManagerImpl();
 
-    private static final Map<UUID, BaseLocation> previousLocations = new ConcurrentHashMap<>();
+    private static final ConcurrentHashMap<UUID, BaseLocation> previousLocations = new ConcurrentHashMap<>();
 
     @Override
     public @Nullable HomeLocation getBedLocation(@NonNull ServerPlayer player) {

@@ -232,4 +232,8 @@ public class TeleportManagerImpl implements TeleportManager {
         }
         return teleport(player, location);
     }
+
+    public boolean teleportToPlayer(@NonNull ServerPlayer player, @NonNull ServerPlayer target) {
+        return teleport(player, new BaseLocation(null, target.blockPosition(), target.level()));
+    }
 }

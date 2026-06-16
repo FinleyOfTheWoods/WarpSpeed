@@ -26,11 +26,12 @@ public class Warpspeed implements ModInitializer {
             databaseManager.initialise();
             CommandRegistrationCallback.EVENT.register((dispatcher, context, selection) -> {
                 log.info("Registering {} commands", MOD_NAME);
-                HomeCommand.register(dispatcher);
-                SpawnCommand.register(dispatcher);
-                WarpCommand.register(dispatcher);
-                RTPCommand.register(dispatcher);
                 BackCommand.register(dispatcher);
+                HomeCommand.register(dispatcher);
+                RTPCommand.register(dispatcher);
+                SpawnCommand.register(dispatcher);
+                TPXCommand.register(dispatcher);
+                WarpCommand.register(dispatcher);
             });
         }
         catch (Exception e) {
